@@ -2,6 +2,25 @@ package app
 
 import "github.com/xddcode/markgo/internal/mdeditor"
 
+// Guides are opt-in documents. Opening them again keeps any edits the writer
+// made to their existing copies.
+func (a *App) openGuides() {
+	for _, file := range sampleDocuments() {
+		found := false
+		for _, current := range a.files {
+			if current.ID == file.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			a.files = append(a.files, file)
+		}
+	}
+	a.selected = "Welcome.md"
+	a.reading = true
+}
+
 func sampleDocuments() []*mdeditor.File {
 	return []*mdeditor.File{
 		mdeditor.NewFile("Welcome.md", welcomeDocument),
@@ -36,19 +55,35 @@ Write **bold**, *italic*, or ` + "`inline code`" + ` text. Move the caret into f
 
 const writingGuideDocument = `# Writing Guide
 
-## Keep the source truthful
+## Make room for your words
 
-The editor always stores the original Markdown. Preview changes how text appears, never what the file contains.
+Choose the half-filled circle in the header to open Appearance. Paper, Warm paper and Graphite change the whole interface. Adjust the text size, type and page width until the page feels comfortable. Your choices are remembered on this device.
 
-## Make every interaction count
+## Start a document
 
-1. Keep the writing surface quiet.
-2. Reveal complexity only when it is needed.
-3. Let every action be undone.
+Use the plus beside Files, or press Cmd/Ctrl+N. Open an existing document from the three-dot document menu, or press Cmd/Ctrl+O. Open a folder from the foot of the sidebar.
+
+Select a phrase and use Formatting for bold, italic, a link or inline code. H1 and H2 change the current heading. These actions can be undone with Cmd/Ctrl+Z.
+
+## Keep writing
+
+Return continues a list or quote; another Return on an empty item ends it. Find opens search and replacement. The Outline tab takes you to a heading. Focus mode gives the page the whole window.
+
+## Save your work
+
+Press Cmd/Ctrl+S to save. A new document asks for a location. The footer tells you whether changes are unsaved. Saving is manual; there is no automatic save or crash recovery.
+
+## Read and edit
+
+The book icon opens a formatted reading view. The pencil returns to editing. Tables and local images are formatted in reading mode; edit their Markdown in the writing view. The document menu can show all Markdown source marks.
 
 ### Shortcuts
 
-Use the editor's standard shortcuts for selection, find and replace, multiple carets, undo and redo.
+- Appearance: Cmd/Ctrl+comma
+- Toggle sidebar: Cmd/Ctrl+backslash
+- Focus mode: Cmd/Ctrl+Shift+F
+- Find: Cmd/Ctrl+F
+- Bold and italic: Cmd/Ctrl+B and Cmd/Ctrl+I
 `
 
 const markdownReferenceDocument = `# Markdown Reference
@@ -75,5 +110,5 @@ Images use paths relative to the saved document. Read mode displays local images
 
 ## Source fidelity
 
-Code fences, links and Markdown punctuation remain in your file even when live preview hides their markers. Use Source to inspect the original text.
+Code fences, links and Markdown punctuation remain in your file even when live preview hides their markers. Use Show Markdown source in the document menu to inspect the original text.
 `

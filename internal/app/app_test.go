@@ -13,9 +13,9 @@ import (
 )
 
 func TestWorkspace(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	tt := ui.NewTester(a.View, 1320, 840)
-	if !tt.HasText("MarkGo") || !tt.HasText("Welcome.md") {
+	if !tt.HasText("markgo") || !tt.HasText("Welcome.md") {
 		t.Fatalf("initial workspace texts %q", tt.Texts())
 	}
 	if err := tt.Click("Markdown Reference.md"); err != nil {
@@ -24,7 +24,10 @@ func TestWorkspace(t *testing.T) {
 	if got := a.current().Name; got != "Markdown Reference.md" {
 		t.Fatalf("selected document %q", got)
 	}
-	if err := tt.Click("Live preview"); err != nil {
+	if err := tt.Click("Document menu"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tt.Click("Show Markdown source"); err != nil {
 		t.Fatal(err)
 	}
 	if a.preview {
@@ -48,7 +51,7 @@ func TestSelectedText(t *testing.T) {
 }
 
 func TestOutlineNavigatesToHeading(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	tt := ui.NewTester(a.View, 1320, 840)
 	if err := tt.Click("Outline"); err != nil {
 		t.Fatal(err)
@@ -74,7 +77,7 @@ func TestOpeningSameDocumentDoesNotDuplicateOrDiscardEdits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := New()
+	a := exampleApp()
 	a.addOpened(file, snapshot)
 	file.State.Buffer.Edit(editor.Edit{Start: 0, End: 0, Text: "New text\n"})
 	count := len(a.files)
@@ -92,13 +95,16 @@ func TestOpeningSameDocumentDoesNotDuplicateOrDiscardEdits(t *testing.T) {
 }
 
 func TestFormattingToolbarAndShortcut(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	tt := ui.NewTester(a.View, 1320, 840)
 	file := a.current()
 	before := file.State.Buffer.String()
 	start := strings.Index(before, "focused writing")
 	file.State.Select(start, start+len("focused writing"))
 	tt.Frame()
+	if err := tt.Click("Formatting"); err != nil {
+		t.Fatal(err)
+	}
 	if err := tt.Click("Bold"); err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +124,7 @@ func TestFormattingToolbarAndShortcut(t *testing.T) {
 }
 
 func TestFolderTreeExpandsAndFilters(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	a.folder = &storage.Entry{Name: "Workspace", Directory: true, Children: []storage.Entry{
 		{Name: "notes", Path: "/workspace/notes", Directory: true, Children: []storage.Entry{{Name: "nested.md", Path: "/workspace/notes/nested.md"}}},
 		{Name: "other.md", Path: "/workspace/other.md"},
@@ -140,7 +146,7 @@ func TestFolderTreeExpandsAndFilters(t *testing.T) {
 }
 
 func TestCloseDocumentKeepsDirtyTextWithoutConfirmation(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	first := a.current()
 	a.closeDocument(first)
 	if len(a.files) != 2 || a.current() == first {
@@ -155,7 +161,7 @@ func TestCloseDocumentKeepsDirtyTextWithoutConfirmation(t *testing.T) {
 }
 
 func TestReadModeKeepsMarkdownSourceUntouched(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	tt := ui.NewTester(a.View, 1320, 840)
 	before := a.current().State.Buffer.String()
 	if err := tt.Click("Read document"); err != nil {
@@ -164,7 +170,7 @@ func TestReadModeKeepsMarkdownSourceUntouched(t *testing.T) {
 	if !a.reading || !tt.HasText("Welcome to MarkGo") {
 		t.Fatalf("read mode: %q", tt.Texts())
 	}
-	if err := tt.Click("Read document"); err != nil {
+	if err := tt.Click("Edit document"); err != nil {
 		t.Fatal(err)
 	}
 	if a.reading || a.current().State.Buffer.String() != before {
@@ -173,7 +179,7 @@ func TestReadModeKeepsMarkdownSourceUntouched(t *testing.T) {
 }
 
 func TestLivePreviewTaskClickEditsSourceAndCanUndo(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	tt := ui.NewTester(a.View, 1320, 840)
 	file := a.current()
 	before := file.State.Buffer.String()
@@ -189,18 +195,18 @@ func TestLivePreviewTaskClickEditsSourceAndCanUndo(t *testing.T) {
 }
 
 func TestFocusModeRestoresWorkspace(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	tt := ui.NewTester(a.View, 1320, 840)
 	if err := tt.Click("Focus mode"); err != nil {
 		t.Fatal(err)
 	}
-	if !a.focusMode || tt.HasText("WORKSPACE") {
+	if !a.focusMode || tt.HasText("OPEN DOCUMENTS") {
 		t.Fatalf("focus mode: %q", tt.Texts())
 	}
 	if err := tt.Click("Exit focus mode"); err != nil {
 		t.Fatal(err)
 	}
-	if a.focusMode || !tt.HasText("WORKSPACE") {
+	if a.focusMode || !tt.HasText("OPEN DOCUMENTS") {
 		t.Fatalf("workspace did not return: %q", tt.Texts())
 	}
 }
@@ -214,7 +220,7 @@ func TestReloadKeepsNewerEditsAndPreservesDiskBytes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := New()
+	a := exampleApp()
 	a.addOpened(file, snapshot)
 	version := file.State.Buffer.Version()
 	updated := []byte("first\r\nsecond\nthird\r\n")
@@ -239,7 +245,7 @@ func TestReloadKeepsNewerEditsAndPreservesDiskBytes(t *testing.T) {
 }
 
 func TestFindReplaceAndUndoInLivePreview(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	file := mdeditor.NewFile("search.md", "# 中文标题\n\n你好 world，你好 **world**。\n")
 	a.files, a.selected = []*mdeditor.File{file}, file.ID
 	tt := ui.NewTester(a.View, 960, 640)
@@ -283,7 +289,7 @@ func TestFindReplaceAndUndoInLivePreview(t *testing.T) {
 }
 
 func TestCompositionWithLivePreviewPreservesSourceAndUndo(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	file := mdeditor.NewFile("composition.md", "**标题**\n\n- ")
 	a.files, a.selected = []*mdeditor.File{file}, file.ID
 	tt := ui.NewTester(a.View, 960, 640)
@@ -306,7 +312,7 @@ func TestCompositionWithLivePreviewPreservesSourceAndUndo(t *testing.T) {
 }
 
 func TestFolderFilterRevealsCollapsedMatchesWithoutChangingExpansion(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	a.folder = &storage.Entry{Name: "Workspace", Directory: true, Children: []storage.Entry{
 		{Name: "notes", Path: "/workspace/notes", Directory: true, Children: []storage.Entry{{Name: "nested.md", Path: "/workspace/notes/nested.md"}}},
 	}}
@@ -329,7 +335,7 @@ func TestFolderFilterRevealsCollapsedMatchesWithoutChangingExpansion(t *testing.
 }
 
 func TestNativeOpenRequestsAreRetainedBeforeWindowAndWhileBusy(t *testing.T) {
-	a := New()
+	a := exampleApp()
 	dir := t.TempDir()
 	first, second := filepath.Join(dir, "first.md"), filepath.Join(dir, "second.md")
 	a.OpenFile(first)
@@ -344,4 +350,11 @@ func TestNativeOpenRequestsAreRetainedBeforeWindowAndWhileBusy(t *testing.T) {
 	if len(a.openQueue) != 2 {
 		t.Fatal("busy workbench discarded pending files")
 	}
+}
+
+func exampleApp() *App {
+	a := New()
+	a.files = sampleDocuments()
+	a.selected = a.files[0].ID
+	return a
 }

@@ -10,6 +10,10 @@ MarkGo is a free, open-source, local-first Markdown editor built with Go and [My
 
 Open a Markdown file or folder, write with source-preserving live preview, and use the outline, formatting controls, find and replace, or focus mode to work with your text.
 
+![Paper theme, native reading view](docs/design/images/paper-reading.png)
+
+*Rendered with MyGo's headless native UI renderer. This shows the reading view; editing keeps the original Markdown buffer.*
+
 ## Principles
 
 - **Plain Markdown:** documents remain portable files, not a proprietary database.
@@ -24,7 +28,10 @@ Open a Markdown file or folder, write with source-preserving live preview, and u
 - Apply headings, bold, emphasis, inline code, links, lists, and quotes with undoable formatting controls.
 - Continue ordinary lists, tasks, and quotes with Return; leave an empty item with another Return.
 - Find and replace with case, whole-word, regular-expression, and selection options. Replace all is one undo step.
-- Use source or live-preview editing, a formatted reading view, focus mode, and system light/dark appearance.
+- Start on a blank page; open built-in writing guides from the document menu when needed.
+- Use source or live-preview editing, a formatted reading view, and focus mode.
+- Choose Paper, Warm paper, or Graphite for the whole interface, or follow system appearance.
+- Adjust text size, Modern/Book typography, and page width; appearance preferences stay on your device.
 - See word and character counts, modified-document markers, and external-file-change warnings.
 
 The [writing guide](docs/writing.md) explains shortcuts, saving, and the difference between editing and reading.

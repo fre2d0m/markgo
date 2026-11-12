@@ -147,13 +147,15 @@ func (a *App) saveAllAndExit(quit bool) {
 }
 
 func (a *App) newDocument() {
+	a.reading, a.formatOpen, a.appearanceOpen = false, false, false
+	a.query = ""
 	a.nextID++
 	file := mdeditor.NewFile(fmt.Sprintf("Untitled %d.md", a.nextID), "")
 	file.ID = fmt.Sprintf("document-%d", a.nextID)
 	a.files = append(a.files, file)
 	a.selected = file.ID
 	file.Focus.Focus()
-	a.notice = "New document. Save it to choose a location."
+	a.notice = ""
 }
 
 func (a *App) closeDocument(file *mdeditor.File) {
@@ -205,7 +207,7 @@ func (a *App) removeDocument(id string) {
 		} else if a.selected == id {
 			a.selected = a.files[min(index, len(a.files)-1)].ID
 		}
-		a.notice = "Closed " + file.Name
+		a.notice = ""
 		return
 	}
 }
@@ -295,7 +297,7 @@ func (a *App) addOpened(file *mdeditor.File, snapshot storage.Snapshot) {
 	if file.HasMixedLineEndings() {
 		a.notice = "Mixed line endings: use Save as to create a normalized copy after editing."
 	} else {
-		a.notice = "Opened " + file.Name
+		a.notice = ""
 	}
 }
 
@@ -401,7 +403,7 @@ func (a *App) saveFile(file *mdeditor.File, saveAs bool, onSaved func()) {
 			a.disk[fileID] = saved
 			delete(a.conflicts, fileID)
 			if file.MarkSavedVersion(captured.Text.Version()) {
-				a.notice = "Saved " + file.Name
+				a.notice = ""
 				if onSaved != nil {
 					onSaved()
 				}
