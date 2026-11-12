@@ -2,6 +2,7 @@
 /.mygo/
 /dist/
 /coverage.out
+/.scratch/
 mygo_windows_*.syso
 *.exe
 *.dll

@@ -6,9 +6,11 @@ MarkGo is a writing tool, not a dashboard. The document is the visual center; na
 
 ## Workbench
 
-The current shell has a 56 DIP header, a 224 DIP document sidebar, a flexible editor, an optional 286 DIP AI panel, and a 28 DIP status bar. The sidebar and AI panel can be hidden without changing the document buffer.
+The workbench has a 56 DIP header, a 224 DIP document sidebar, a flexible editor, and a 28 DIP status bar. The sidebar switches between files and the current document's outline. Focus mode hides navigation, formatting controls, and status without changing the document buffer. AI controls are absent from the writing interface.
 
-The editor uses 15 DIP text with 1.75 line height, soft wrapping, no line-number gutter, and source marks revealed on the caret's lines. The current live preview is an engineering milestone, not the final typographic renderer.
+The editor uses 16 DIP system text with 1.75 line height, a centered 760 DIP maximum content width, soft wrapping, and no line-number gutter or active-line background. Source marks are revealed for the element containing a caret or selection. The 42 DIP formatting toolbar uses 32 DIP controls which preserve the selection and return keyboard focus to writing. The compact find panel uses the same 32 DIP input and button heights.
+
+Read mode renders native Markdown typography, tables, code blocks, and local images. It is a separate reading view; do not describe it as directly editable rich text. The editable view currently uses fixed line metrics.
 
 ## Theme tokens
 
