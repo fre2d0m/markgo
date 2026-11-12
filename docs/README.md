@@ -2,6 +2,7 @@
 
 ## Current guides
 
+- [Writing guide](writing.md): documents, formatting, search, saving, reading mode, and shortcuts.
 - [Architecture overview](architecture/overview.md): package boundaries, document ownership, and execution model.
 - [Development setup](development/setup.md): requirements, commands, repository layout, and definition of done.
 - [Design system](design/design-system.md): visual principles, theme tokens, and UI verification.

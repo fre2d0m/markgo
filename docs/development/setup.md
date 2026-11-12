@@ -32,6 +32,7 @@ make security
 - `cmd/markgo`: executable entry point.
 - `internal/app`: workbench state, views, theme, sample documents, and UI tests.
 - `internal/mdeditor`: Markdown editor state and live-preview behavior.
+- `internal/storage`: guarded UTF-8 file saving and folder enumeration.
 - `resources`: application resources used by MyGo packaging.
 - `docs`: architecture, design, development, and testing guides.
 - `.github`: issue and PR contracts, dependency automation, and workflows.

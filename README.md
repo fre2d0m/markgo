@@ -6,32 +6,36 @@
 
 **English | [简体中文](README.zh-CN.md)**
 
-MarkGo is a free, open-source, local-first AI Markdown editor built with Go and [MyGo](https://github.com/egoist/mygo). Its native interface uses no Electron runtime, embedded browser, or JavaScript layer.
+MarkGo is a free, open-source, local-first Markdown editor built with Go and [MyGo](https://github.com/egoist/mygo). Its fully drawn native interface uses no Electron runtime, WebView, or JavaScript layer.
 
-> MarkGo is at the engineering-foundation stage. The current source provides a native workbench, editable in-memory sample documents, live Markdown preview, and UI behavior tests. It does not yet open or save files or connect to AI models.
+Open a Markdown file or folder, write with source-preserving live preview, and use the outline, formatting controls, find and replace, or focus mode to work with your text.
 
 ## Principles
 
 - **Plain Markdown:** documents remain portable files, not a proprietary database.
 - **Local-first:** core writing works without an account or a MarkGo server.
-- **AI with consent:** model context and edits must be visible, reviewable, and undoable.
 - **Native and focused:** a quiet writing surface, responsive interaction, and no required web runtime.
 - **Free and open source:** no subscriptions, feature locks, advertisements, or telemetry.
 
-## Current status
+## Writing
 
-| Area | Status |
-| --- | --- |
-| Native three-pane workbench | Available |
-| Editable in-memory Markdown documents | Available |
-| Document switching and filtering | Available |
-| Live source-mark preview and clickable task markers | Available |
-| Selection context and AI panel shell | Available |
-| Headless UI behavior tests | Available |
-| File opening, saving, and recovery | Planned |
-| Full CommonMark/GFM editing and rendering | Planned |
-| Local model providers and reviewable AI diffs | Planned |
-| Published packages and releases | Planned |
+- Open, create, save, and save copies of UTF-8 Markdown documents.
+- Browse a local folder, filter filenames, switch open documents, and navigate headings from the outline.
+- Apply headings, bold, emphasis, inline code, links, lists, and quotes with undoable formatting controls.
+- Continue ordinary lists, tasks, and quotes with Return; leave an empty item with another Return.
+- Find and replace with case, whole-word, regular-expression, and selection options. Replace all is one undo step.
+- Use source or live-preview editing, a formatted reading view, focus mode, and system light/dark appearance.
+- See word and character counts, modified-document markers, and external-file-change warnings.
+
+The [writing guide](docs/writing.md) explains shortcuts, saving, and the difference between editing and reading.
+
+## Current limits
+
+Live preview hides supported Markdown delimiters while keeping one editable source buffer. It is not yet a complete Typora-style typesetting editor: headings use the editor's line metrics, and tables and images are formatted in **Read** mode while their source is edited in **Edit** mode. Math remains TeX text.
+
+Save is manual; automatic saving and crash recovery are not available. External changes are checked when the window regains focus and before saving. Save as creates a new file and refuses to overwrite an existing destination. Files must be regular UTF-8 files; symbolic links are rejected. New-file creation requires filesystem hard-link support. Edited documents with mixed line endings require an explicitly confirmed normalized copy.
+
+AI features are deferred until the core writing experience is ready. The application does not connect to model providers. Platform-specific window, input-method, dialog, and packaging behavior needs native verification on each supported operating system.
 
 See [ROADMAP.md](ROADMAP.md) for direction and non-goals.
 

@@ -6,13 +6,13 @@ func sampleDocuments() []*mdeditor.File {
 	return []*mdeditor.File{
 		mdeditor.NewFile("Welcome.md", welcomeDocument),
 		mdeditor.NewFile("Writing Guide.md", writingGuideDocument),
-		mdeditor.NewFile("AI Notes.md", aiNotesDocument),
+		mdeditor.NewFile("Markdown Reference.md", markdownReferenceDocument),
 	}
 }
 
 const welcomeDocument = `# Welcome to MarkGo
 
-A **free and open-source** Markdown editor for focused writing and AI-assisted thinking.
+A **free and open-source** Markdown editor for focused writing and clear thinking.
 
 ## A calm place to write
 
@@ -21,13 +21,13 @@ MarkGo keeps your words in plain Markdown files. There is no account, no proprie
 - [x] Native interface drawn by MyGo
 - [x] Real editing with undo, search and multiple carets
 - [x] Live Markdown preview
-- [ ] Local AI provider integration
+- [ ] Write your first note
 
 > The best writing tool gets out of the way until you need it.
 
 ## Try the editor
 
-Write **bold**, *italic*, or ` + "`inline code`" + ` text. Move the caret to a formatted line to reveal its source. Use the sidebar to switch documents.
+Write **bold**, *italic*, or ` + "`inline code`" + ` text. Move the caret into formatted text to reveal its source. Use the sidebar to switch documents.
 
 ` + "```go\nfunc main() {\n\tfmt.Println(\"Hello, MarkGo!\")\n}\n```" + `
 
@@ -51,16 +51,29 @@ The editor always stores the original Markdown. Preview changes how text appears
 Use the editor's standard shortcuts for selection, find and replace, multiple carets, undo and redo.
 `
 
-const aiNotesDocument = `# AI Notes
+const markdownReferenceDocument = `# Markdown Reference
 
-MarkGo treats AI as a **careful collaborator**, not an invisible replacement for the writer.
+## Lists and tasks
 
-## The editing contract
+- Press Return to continue a list.
+- Press Return again on an empty item to end it.
+- [ ] New task items start unchecked.
 
-- Read only the context the user chooses.
-- Show a diff before changing the source.
-- Keep every accepted edit undoable.
-- Support local models without requiring an account.
+## Tables
 
-> AI can help shape the words. The writer keeps the final say.
+Use Read to view a formatted table, and Edit to change its Markdown source.
+
+| Element | Markdown |
+| --- | --- |
+| Heading | # Heading |
+| Bold | **bold** |
+| Emphasis | *italic* |
+
+## Local images
+
+Images use paths relative to the saved document. Read mode displays local images; remote images are not downloaded automatically.
+
+## Source fidelity
+
+Code fences, links and Markdown punctuation remain in your file even when live preview hides their markers. Use Source to inspect the original text.
 `
