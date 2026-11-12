@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible defect in MarkGo
+title: "fix: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not attach credentials, private documents, model keys, or other sensitive material.
+  - type: input
+    id: version
+    attributes:
+      label: Commit or release
+      placeholder: main commit SHA or v0.1.0
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system, architecture, and display scale
+      placeholder: Windows 11 amd64, 150%
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest complete scenario and a shareable Markdown fixture when useful.
+      placeholder: "1. Open...\n2. Select...\n3. Observe..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and diagnostics
+    validations:
+      required: true

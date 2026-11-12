@@ -1,0 +1,14 @@
+{
+  "name": "MarkGo",
+  "identifier": "dev.markgo.app",
+  "version": "0.1.0",
+  "out": "build",
+  "main": "./cmd/markgo",
+  "fileAssociations": [
+    {
+      "ext": ["md", "markdown"],
+      "name": "Markdown Document",
+      "mimeType": "text/markdown"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+name: Feature proposal
+description: Propose a user-facing capability or workflow
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: User scenario
+      description: What writing or knowledge task are you trying to accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable conditions that make this issue complete.
+      placeholder: "- Given...\n- When...\n- Then..."
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and scope
+      description: Describe alternatives, tradeoffs, and explicit non-goals.
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: Design, privacy, or compatibility impact
+      description: Note source-format, UI, architecture, AI-context, security, or documentation impact.

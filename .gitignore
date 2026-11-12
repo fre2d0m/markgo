@@ -1,0 +1,11 @@
+/build/
+/.mygo/
+/dist/
+/coverage.out
+mygo_windows_*.syso
+*.exe
+*.dll
+*.so
+*.dylib
+.DS_Store
+Thumbs.db
