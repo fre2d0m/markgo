@@ -177,9 +177,19 @@ func (n *typesettingInput) UnmarkText() {
 	r, _ := n.MarkedRange()
 	a, z := t.compositionAnchor, t.compositionCaret
 	before := t.Source.Buffer.Version()
+	n.clearMark()
 	t.composing, n.marked = false, false
 	t.Sync()
 	n.ended = &endedComposition{t.Source.Buffer.Version(), r, a, z, t.Source.Buffer.Version() != before}
+}
+
+func (n *typesettingInput) clearMark() {
+	if !n.marked {
+		return
+	}
+	n.owner.Document.Edit(func(e *richtext.Edit) {
+		e.Format(n.start, n.end, func(a *richtext.Attributes) { a.Underline = false })
+	})
 }
 
 func (n *typesettingInput) BoundsForRange(_ ui.TextInputRange) (ui.Rect, ui.TextInputRange, bool) {
