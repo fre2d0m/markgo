@@ -6,6 +6,8 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- A native document tab strip with independent writing positions and undo, unsaved-state feedback, guarded closing, full-path tooltips, context actions, Ctrl+Tab cycling and a bounded all-documents menu.
+- Shared sample tabs in Writing Preview; closed sample edits remain available in memory.
 - Sakura, Sage, Mist, Lavender, Sand, Pearl, Midnight, Pine and Plum writing themes, alongside Paper, Warm paper and Graphite.
 - A compact twelve-theme gallery with a selected check, keyboard navigation and an explicit close action.
 - Local recovery checkpoints for named and untitled drafts, previous-session restoration, and a searchable recent-document history.
@@ -33,10 +35,10 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 - Added restrained hover/press feedback throughout formatting, appearance, search and dialog actions, respecting reduced motion.
 - Tuned primary and secondary text contrast across all twelve palettes, including hovered and pressed surfaces.
 - Replaced the application icon and configured its high-resolution packaging asset.
-- Combined the native title bar and application header into one 48 DIP self-drawn bar; retained OS resize edges and wired custom window controls through the normal close protection and maximize state.
+- Rebuilt the workspace around a 60 DIP self-drawn tab bar, a 240 DIP navigation rail and a distinct paper surface; retained OS resize edges, close protection and maximize state.
 - Refined Paper, Warm paper, and Graphite; reduced wordmark and icon weight, softened sidebar selection, and added active-tool states and interruptible, reduced-motion-aware panel transitions.
 - Kept keyboard focus in the file list while moving between documents; Enter begins editing the selection.
-- Replaced stacked toolbars with one header and an on-demand formatting panel; unified controls and find fields around 40 DIP targets.
+- Moved writing modes and common inline actions into a 56 DIP page toolbar, with labeled heading, list and quote actions in the Formatting panel; unified controls and find fields around 40 DIP targets.
 - Refined sidebar, outline, reading typography, neutral syntax colors, hover feedback, and save-status presentation.
 - Start with a blank editable document; examples are available from the document menu.
 

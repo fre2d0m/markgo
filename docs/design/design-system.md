@@ -2,17 +2,19 @@
 
 ## Direction
 
-MarkGo should feel like opening a good notebook: a quiet page, clear type, and tools within reach. Its identity comes from proportion, spacing, an original line-drawn M, and consistent interactions. Keep the interface restrained: no decorative gradients, multicolored panels, or AI ornament.
+MarkGo should feel like opening a good notebook: a quiet page, clear type, and tools within reach. Its identity comes from proportion, spacing, the application's M icon, and consistent interactions. Keep the interface restrained: no decorative gradients, multicolored panels, or AI ornament.
 
-The document is the visual center. Navigation supports writing; formatting appears when requested. A first launch starts with an empty editable document; subsequent launches resume the prior session. Guides are available through the document menu.
+The document is the visual center. Navigation supports writing; common formatting sits just above the page, with detailed controls in popovers. A first launch starts with an empty editable document; subsequent launches resume the prior session. Guides are available through the document menu.
 
 ## Workbench and typography
 
-A single 48 DIP self-drawn title bar contains a small document-menu wordmark, sidebar toggle, document title, five writing actions, and minimize/maximize/close controls. Find, Formatting, Read/Edit, Focus, and Appearance stay within reach. The 224 DIP sidebar holds Files/Outline, document filtering, open documents, the folder tree, and Open a folder. A quiet 30 DIP footer reports actual save state, optional operation messages, caret position, and word/character counts.
+A 60 DIP self-drawn title bar holds the brand, document tabs and global tools. The active tab joins the page below; a 56 DIP page toolbar separates writing/reading mode from formatting. A 240 DIP sidebar holds Files/Outline, filtering, open documents, the folder tree and Open a folder. The theme's rail color surrounds the paper surface, whose outer corners use 16 DIP with a square tab-side top corner. A 12 DIP outer gutter keeps the page from touching the right window edge. A quiet 30 DIP footer reports actual save state, operation messages, caret position and counts.
 
 The native title bar and caption buttons are hidden with MyGo's `TitleBarHidden` and `HideWindowButtons`. The OS frame remains responsible for resize edges, rounded corners, and shadows; do not switch to a borderless `Frameless` window. Blank title-bar space drags the window and supports MyGo's native double-click behavior. The custom maximize target registers with `MaximizeButton` for Windows Snap integration. The close action calls `Window.Close`, preserving the existing unsaved-document guard. All three controls remain available in Focus mode.
 
-The wordmark is 13 DIP with a 17 DIP symbol. The document name truncates before the writing tools and window controls; its tooltip exposes the path or full unsaved name. Files/Outline uses a short underline, and file selection uses a soft neutral surface. Document and outline rows use 13 DIP text; secondary rail labels use at least 11 DIP. Open a folder stays at the bottom of the sidebar. Repeated file icons are omitted to give filenames room. Footer counts use tabular figures and reserved widths to avoid shifting with each new digit.
+The header uses the existing application icon at 28 DIP and a 15 DIP MarkGo name. Document tabs are 224 × 48 DIP, with 12 DIP top corners, a 16 DIP file glyph, 13 DIP title and a reserved 40 DIP close target. Long titles ellipsize with full-path tooltips. A dirty dot occupies the close glyph's space until hover; the target never shifts. New-tab and All open documents controls follow the tabs, while global actions remain at the right. Overflow scrolls horizontally; the menu has a 480 DIP maximum height and distinguishes duplicate filenames by folder. Current tabs reveal after navigation or resizing without pulling back a user who intentionally scrolls the strip. Native tabs and menus retain their keyboard and accessibility models.
+
+Files/Outline uses a short underline; selected files use a paper surface and theme-colored icon. Document and outline rows use 13 DIP text, secondary rail labels at least 11 DIP. Open a folder stays at the bottom. Footer counts use tabular figures and reserved widths.
 
 The centered page defaults to 720 DIP maximum width, 18 DIP system text, and 1.85 line height. The writing area has 48 DIP horizontal and 38 DIP vertical breathing room. The editor has no line-number gutter or active-line background. Writers can choose 14–24 DIP text, system or serif type, and 640/720/840 DIP page widths. At the 960 × 640 minimum window, the page shrinks to fit.
 
@@ -45,9 +47,9 @@ The Appearance panel applies changes immediately to the whole client, including 
 
 The square application icon in resources/icon.png is configured in mygo.json and embedded for Window.SetIcon in both development and packaged builds. Keep at least 1024 × 1024 pixels so the same source can serve packaging and high-density displays. The interface icons in internal/app/icons.go are original vector drawings. The 24-unit control icons share 1.65-unit strokes, rounded joins, and rounded terminals; no emoji or font glyphs stand in for controls. Heading labels H1/H2 and textual search options retain their familiar notation.
 
-Icon actions, formatting tools, and find inputs/buttons have 40 DIP hit targets. Workbench glyphs are 18 DIP inside those targets. Window controls use 44 × 48 DIP targets; their glyphs are deliberately smaller. Hover and pressed states use the shared palette; control backgrounds transition over 100 ms and buttons press to 0.96 scale over 90 ms. Appearance, Formatting, and Read/Edit indicate their active state. The window close button uses a red background only while hovered or pressed. Controls retain meaningful labels, tooltips, keyboard focus, and native widget behavior. Pressing a theme and dragging outside it cancels the choice.
+Icon actions, formatting tools, and find inputs/buttons have 40 DIP hit targets. Workbench glyphs are 18 DIP inside those targets. Window controls use 44 × 60 DIP targets; their glyphs are deliberately smaller. Hover and pressed states use the shared palette; control backgrounds transition over 100 ms and buttons press to 0.96 scale over 90 ms. Appearance, Formatting, and Read/Edit indicate their active state. The window close button uses a red background only while hovered or pressed. Controls retain meaningful labels, tooltips, keyboard focus, and native widget behavior. Pressing a theme and dragging outside it cancels the choice.
 
-`internal/writingui` supplies the shared 8 DIP control radius, 16 DIP floating-surface radius, field and button states. Sidebars are separated by surface tone. Floating surfaces use a thin theme-colored edge and a restrained shadow, with more shadow opacity in dark themes. The page has no enclosing card. Panels enter over 130 ms with a 4 DIP movement and fade, and leave over 90 ms with a 2 DIP movement. Transitions can be interrupted; MyGo's reduced-motion preference suppresses movement. Never animate the writing page.
+`internal/writingui` supplies the shared 8 DIP control radius, 16 DIP floating-surface radius, field and button states. Sidebars are separated by surface tone. Floating surfaces use a thin theme-colored edge and a restrained shadow, with more shadow opacity in dark themes. The paper surface groups the page toolbar and document; it has no decorative shadow or animation. Replacing a menu's shadow first clears the toolkit shadow so two shadows cannot stack. Panels enter over 130 ms with a 4 DIP movement and fade, and leave over 90 ms with a 2 DIP movement. Transitions can be interrupted; MyGo's reduced-motion preference suppresses movement. Never animate the writing page.
 
 Application menu rows use 40 DIP targets while retaining MyGo's menu keyboard model and shortcut column. The document menu shares the panel surface and uses 8 DIP inner padding. Platform-provided text-editing context actions retain their toolkit layout.
 
@@ -59,6 +61,7 @@ Link and code-language panels share field dimensions, a 15 DIP heading and an em
 - Typography changes may reflow text but preserve source and selection.
 - Formatting preserves the selection until applying one undoable edit, then returns focus to writing.
 - Appearance and Formatting are mutually exclusive. Escape closes the open panel without collapsing the writing selection; outside clicks dismiss it.
+- Tabs reuse the same file identities and guarded close actions as the sidebar. Ctrl+Tab / Ctrl+Shift+Tab cycle on all platforms; each file retains its editing position and undo. A context action always addresses its tab's document. Closing an inactive tab keeps the current document; closing the active clean tab chooses its neighbor.
 - File-list arrow, Home, and End navigation keeps focus in the list across document changes. Enter starts editing the selected document.
 - Sidebar width moves over 180 ms with ease-out and can reverse from its current width. Its controls stop accepting input when closing. Keep the editor's identity stable and its source, selection, scroll and undo intact; never fade or scale the document.
 - Files/Outline uses a 160 ms sliding indicator and a 120 ms content entrance. Outline rows align to the left and editing emphasizes the caret's current section. Read mode addresses reader anchors.
@@ -75,6 +78,7 @@ Link and code-language panels share field dimensions, a 15 DIP heading and an em
 - Simple quotations use a 2 DIP neutral rule and one shared 40 DIP inset per level. Nested rules stay aligned through wrapped text. Return continues the quotation; an empty line exits one level without letting Markdown lazy continuation pull the next paragraph back in.
 - Fenced code uses a quiet theme surface, 8 DIP corners, 16 DIP horizontal inset and monospace text at 90% of body size. Its 44 DIP header space holds language, Copy and Continue controls with 40 DIP targets. The source fences are hidden, including in empty blocks; no editable header or footer is inserted into the document.
 - Code-header hover takes 100 ms; press uses a 90 ms transition to 0.96 scale. A local check acknowledges Copy for 1.5 seconds. The language popup follows the workbench's 130/90 ms enter/exit motion, validates in place, and returns writing focus on Apply, Cancel or Escape. Reduced motion suppresses movement. Language selection sets Markdown info and indentation behavior; it does not imply syntax highlighting.
+- Preview tabs keep closed samples available in the rail with their in-memory edits and history. New preview pages are also memory-only; they attach no file, recovery or preference stores.
 - The sample-page list scrolls within its rail at the minimum window size. Revealing a newly selected sample does not prevent the user from scrolling the list afterward.
 - Dirty markers and footer save state must reflect the buffer and actual saved version. Do not imply autosave.
 - Parsing, file I/O, and preference writes stay off the native event loop. Unchanged typography reuses cached themes.
@@ -87,7 +91,7 @@ The interaction recording uses the actual Writing Preview view and animation clo
 
 ![Writing flow and micro-interactions](images/interaction.gif)
 
-![Paper reading view](images/paper-reading.png)
+![Paper reading view with document tabs](images/paper-reading.png)
 
 ![Graphite editing view](images/graphite-editing.png)
 
@@ -117,4 +121,4 @@ The interaction recording uses the actual Writing Preview view and animation clo
 
 ## Verification
 
-Behavior tests cover theme and typography changes, system-following behavior, source/selection/scroll preservation, undo after dismissing a panel, all twelve preference round trips, keyboard theme selection, pointer cancellation, long document names, caption actions, interrupted panels, reduced motion, and non-overlapping control bounds at the minimum size and 1×/1.5×/2× scale. Inspect both reading and editing, all twelve themes, open popovers, find/replace, and focus mode. Native font, IME, window, and screen-reader verification remains a separate platform check. See [product polish verification](../development/product-polish.md) for the change comparison and evidence scope.
+Behavior tests also cover independent tab histories, close guards, context targeting, 24-document overflow, keyboard menu selection, resizing and reopening edited preview samples. Behavior tests cover theme and typography changes, system-following behavior, source/selection/scroll preservation, undo after dismissing a panel, all twelve preference round trips, keyboard theme selection, pointer cancellation, long document names, caption actions, interrupted panels, reduced motion, and non-overlapping control bounds at the minimum size and 1×/1.5×/2× scale. Inspect both reading and editing, all twelve themes, open popovers, find/replace, and focus mode. Native font, IME, window, and screen-reader verification remains a separate platform check. See [product polish verification](../development/product-polish.md) for the change comparison and evidence scope.

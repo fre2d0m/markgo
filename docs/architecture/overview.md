@@ -25,6 +25,8 @@ internal/storage
 - `internal/session` stores bounded recovery checkpoints atomically. The application holds immutable source snapshots, original disk bytes and buffer versions together, serializes them on a worker, and rejects stale write requests. Recent paths and session metadata share the same transaction.
 - `resources` contains assets loaded by MyGo packaging.
 
+Document tabs and the sidebar select the same persistent File objects. The shared tab strip owns only navigation, focus and horizontal scroll state; it reuses each document’s source, selection, undo and guarded close lifecycle. The sample-only Writing Preview uses the same strip with in-memory pages and keeps closed samples available for reopening.
+
 Documents have stable identities independent of their names and paths. Each saved document has a disk snapshot with a content digest and permissions. Saves serialize immutable editor snapshots, write and sync a temporary file beside the destination, recheck the disk snapshot, and rename the temporary file. A concurrent external writer can still race the final check and rename; this is conflict detection, not filesystem locking. New files use an exclusive hard link of the completed temporary file and require filesystem support for hard links.
 
 ## Document model

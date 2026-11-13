@@ -31,7 +31,7 @@ Open a Markdown file or folder, write with source-preserving live preview, and u
 - Return to your previous documents and unfinished drafts; a first launch starts on a blank page.
 - Search recent documents, keep drafts when closing, and recover completed local checkpoints after an interrupted session.
 - Use source or live-preview editing, a formatted reading view, and focus mode.
-- Write beneath one self-drawn title bar, with integrated window controls and a compact file sidebar.
+- Switch between document tabs in a self-drawn title bar, with integrated window controls, a page toolbar and a compact file sidebar.
 - Choose from 12 complete writing themes, including Sakura, Sage, Mist and Graphite, or follow system appearance.
 - Adjust text size, Modern/Book typography, and page width; appearance preferences stay on your device.
 - See word and character counts, modified-document markers, and external-file-change warnings.
@@ -40,7 +40,7 @@ The [writing guide](docs/writing.md) explains shortcuts, saving, and the differe
 
 ## Current limits
 
-Live preview hides supported Markdown delimiters while keeping one editable source buffer. It is not yet a complete Typora-style typesetting editor: headings use the editor's line metrics, and tables and images are formatted in **Read** mode while their source is edited in **Edit** mode. Math remains TeX text.
+Live preview hides supported Markdown delimiters while keeping one editable source buffer. It is not yet a complete Typora-style typesetting editor: headings use the editor's line metrics, and tables and images are formatted in **Read** mode while their source is edited in **Write** mode. Math remains TeX text.
 
 Save is manual. Recovery keeps a separate local copy; it does not automatically save your Markdown files. Checkpoints are scheduled after a short pause, with a five-second maximum scheduling delay during continuous editing. Only completed writes can be recovered; see [recovery and recent documents](docs/writing.md#recovery-and-recent-documents). External changes are checked when the window regains focus and before saving. Save as creates a new file and refuses to overwrite an existing destination. Files must be regular UTF-8 files; symbolic links are rejected. New-file creation requires filesystem hard-link support. Edited documents with mixed line endings require an explicitly confirmed normalized copy.
 

@@ -22,6 +22,9 @@ type TypesettingPreview struct {
 	sidebar       bool
 	formatOpen    bool
 	railSelection int
+	tabs          documentTabState
+	openPages     []int
+	nextPage      int
 }
 
 type previewPage struct {
@@ -34,7 +37,7 @@ type previewPage struct {
 }
 
 func NewTypesettingPreview() *TypesettingPreview {
-	p := &TypesettingPreview{shell: New(), sidebar: true, railSelection: -1}
+	p := &TypesettingPreview{shell: New(), sidebar: true, railSelection: -1, openPages: []int{0, 1, 2}}
 	p.shell.appearance.Theme = "paper"
 	for _, sample := range []struct{ name, description, source string }{
 		{"A quieter morning", "An ordinary beginning", quietMorning},
@@ -87,6 +90,19 @@ func (p *TypesettingPreview) View(c *ui.Context) {
 	c.SetTheme(writingTheme(c.Theme(), a.appearance.Theme))
 	c.SetMenuPresentation(ui.PopoverMenus)
 	t := c.Theme()
+	p.ensureOpen(p.selected)
+	if c.Shortcut(ui.Ctrl, ui.KeyTab) {
+		p.cyclePage(1)
+	}
+	if c.Shortcut(ui.Ctrl|ui.Shift, ui.KeyTab) {
+		p.cyclePage(-1)
+	}
+	if c.Shortcut(ui.Cmd, ui.KeyN) {
+		p.newPage()
+	}
+	if c.Shortcut(ui.Cmd, ui.KeyW) {
+		p.closePage(p.current().file)
+	}
 	page := p.current()
 	if !p.sourceMode {
 		page.typesetter.Sync()
@@ -107,7 +123,7 @@ func (p *TypesettingPreview) View(c *ui.Context) {
 		p.formatOpen = false
 		page.file.Focus.Focus(c)
 	}
-	root := ui.Column(c.Key("writing-preview")).Fill().Background(t.Background)
+	root := ui.Column(c.Key("writing-preview")).Fill().Background(t.Surface)
 	target := float32(0)
 	if p.sidebar {
 		target = sidebarWidth
@@ -119,7 +135,8 @@ func (p *TypesettingPreview) View(c *ui.Context) {
 			if width > 0.5 {
 				ui.Column(c.Key("preview-rail")).Width(width).Shrink(0).Clip().FillHeight().Disabled(!p.sidebar).Children(func() { p.rail(c) })
 			}
-			ui.Column(c.Key("preview-page")).Grow(1).MinWidth(0).FillHeight().Children(func() {
+			pageSurface(c, ui.Column(c.Key("preview-page")).Grow(1).MinWidth(0).FillHeight()).Children(func() {
+				p.writingToolbar(c)
 				if page.typesetter.Notice != "" {
 					ui.Row(c.Key("editing-notice")).FillWidth().Padding(0, 24).MinHeight(44).Gap(8).AlignItems(ui.Center).Background(t.Surface).Children(func() {
 						ui.Text(c, page.typesetter.Notice).FontSize(12).TextColor(t.TextMuted).Grow(1).MinWidth(0).Role(ui.RoleStatus)
@@ -143,7 +160,10 @@ func (p *TypesettingPreview) View(c *ui.Context) {
 					} else {
 						view = mdeditor.TypesettingView(c.Key("typeset-"+f.ID), page.typesetter, font)
 					}
-					view.Bind(&f.Focus).Grow(1).MaxWidth(a.appearance.Width).MinWidth(0).FillHeight().AutoFocus()
+					view.Bind(&f.Focus).Grow(1).MaxWidth(a.appearance.Width).MinWidth(0).FillHeight()
+					if !p.tabs.focus.FocusWithin(c) {
+						view.AutoFocus()
+					}
 				})
 			})
 		})
@@ -151,23 +171,10 @@ func (p *TypesettingPreview) View(c *ui.Context) {
 	})
 }
 
-func (p *TypesettingPreview) header(c *ui.Context) {
+func (p *TypesettingPreview) writingToolbar(c *ui.Context) {
 	t, a := c.Theme(), p.shell
 	page := p.current()
-	ui.Row(c.Key("preview-titlebar")).FillWidth().Height(titleBarHeight).DragWindow().AlignItems(ui.Center).Children(func() {
-		brand := ui.Row(c).Width(sidebarWidth).Shrink(0).FillHeight().Padding(0, 20).Gap(8).AlignItems(ui.Center)
-		if p.sidebar {
-			brand.Background(t.Surface)
-		}
-		brand.Children(func() {
-			ui.Icon(c, icons["mark"]).Size(17, 17).TextColor(t.Text)
-			ui.Text(c, "markgo").FontSize(13).FontWeight(600).LetterSpacing(-0.3)
-			ui.Spacer(c)
-			if iconButton(c, "sidebar", "sidebar", "Toggle sample pages").Clicked() {
-				p.sidebar = !p.sidebar
-			}
-		})
-		ui.Text(c, strings.TrimSuffix(page.file.Name, ".md")).FontSize(12).TextColor(t.TextMuted).Grow(1).MinWidth(0).SingleLine().Ellipsis("…").MarginX(20)
+	ui.Row(c.Key("preview-toolbar")).FillWidth().Height(56).Padding(6, 16).Gap(8).AlignItems(ui.Center).Children(func() {
 		ui.Row(c.Key("view-modes")).Height(44).Shrink(0).Padding(2).Radius(10).Background(t.Surface).Gap(2).AlignItems(ui.Center).Children(func() {
 			for _, mode := range []struct {
 				label  string
@@ -181,6 +188,8 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 				}
 			}
 		})
+		ui.Box(c).Size(1, 20).MarginX(4).Background(t.Border)
+		p.quickFormatting(c)
 		format := stateIconButton(c, "format", "format", "Paragraph style", p.formatOpen)
 		if format.Clicked() {
 			p.formatOpen = !p.formatOpen
@@ -290,13 +299,36 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 				page.typesetter.Undo(false)
 			}
 		}
-		appearance := stateIconButton(c, "appearance", "appearance", "Appearance", a.appearanceOpen)
-		if appearance.Clicked() {
-			a.appearanceOpen = !a.appearanceOpen
-			p.formatOpen = false
+		ui.Spacer(c)
+	})
+	ui.Box(c).FillWidth().Height(1).MarginX(16).Background(t.Border.Alpha(0.55))
+}
+
+func (p *TypesettingPreview) quickFormatting(c *ui.Context) {
+	page := p.current()
+	ui.Row(c.Key("quick-inline-tools")).Shrink(0).Gap(2).Children(func() {
+		for _, action := range []struct {
+			label, icon string
+			kind        mdeditor.InlineKind
+		}{
+			{"Bold", "bold", mdeditor.InlineBold}, {"Italic", "italic", mdeditor.InlineItalic},
+			{"Strikethrough", "strikethrough", mdeditor.InlineStrike}, {"Inline code", "code", mdeditor.InlineCode}, {"Edit link", "link", mdeditor.InlineLink},
+		} {
+			active := !p.sourceMode && page.typesetter.InlineActive(action.kind)
+			stateIconButton(c, action.icon, action.icon, "Quick "+action.label, active).Tooltip(action.label).OnClick(func() {
+				if p.sourceMode {
+					page.typesetter.FromSource()
+				}
+				if action.kind == mdeditor.InlineLink {
+					p.setMode(false)
+					page.typesetter.OpenLink()
+				} else {
+					page.typesetter.ToggleInline(action.kind)
+				}
+				p.formatOpen = false
+				page.file.Focus.Focus(c)
+			})
 		}
-		a.appearancePopover(c, appearance, &page.file.Focus)
-		a.captionButtons(c)
 	})
 }
 
@@ -353,17 +385,7 @@ func (p *TypesettingPreview) rail(c *ui.Context) {
 							ui.Text(c, page.description).FontSize(11).TextColor(t.TextMuted).SingleLine().Ellipsis("…")
 						})
 					})
-					if b.Clicked() {
-						if !p.sourceMode {
-							p.current().typesetter.ToSource()
-							p.current().typesetter.CancelInlineIntent()
-						}
-						p.selected = i
-						if !p.sourceMode {
-							page.typesetter.FromSource()
-						}
-						page.file.Focus.Focus(c)
-					}
+					b.OnClick(func() { p.selectPage(i, true) })
 				}
 			})
 		})

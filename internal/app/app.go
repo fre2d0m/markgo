@@ -25,6 +25,7 @@ type App struct {
 	focusMode          bool
 	sidebar            bool
 	filesFocus         ui.Handle
+	tabs               documentTabState
 	window             *mygo.Window
 	windowCommands     windowCommands
 	windowMaximized    bool
@@ -124,6 +125,12 @@ func (a *App) View(c *ui.Context) {
 	if c.Shortcut(ui.Cmd, ui.KeyW) && !a.fileBusy {
 		a.closeDocument(a.current())
 	}
+	if c.Shortcut(ui.Ctrl, ui.KeyTab) {
+		a.cycleDocument(1)
+	}
+	if c.Shortcut(ui.Ctrl|ui.Shift, ui.KeyTab) {
+		a.cycleDocument(-1)
+	}
 	if c.Shortcut(ui.Cmd|ui.Shift, ui.KeyF) {
 		a.focusMode = !a.focusMode
 		if a.focusMode && !a.reading {
@@ -141,7 +148,7 @@ func (a *App) View(c *ui.Context) {
 			a.current().Focus.Focus(c)
 		}
 	}
-	root := ui.Column(c.Key("workbench")).Fill().Background(c.Theme().Background).Disabled(a.closing && !a.exitPrompt)
+	root := ui.Column(c.Key("workbench")).Fill().Background(c.Theme().Surface).Disabled(a.closing && !a.exitPrompt)
 	showSidebar := a.sidebar && !a.focusMode
 	target := float32(0)
 	if showSidebar {
@@ -203,7 +210,16 @@ func (a *App) editorPane(c *ui.Context, f *mdeditor.File) {
 	} else {
 		st.SetReplacements(nil)
 	}
-	ui.Column(c).Grow(1).MinWidth(0).FillHeight().Children(func() {
+	pane := ui.Column(c).Grow(1).MinWidth(0).FillHeight()
+	if a.focusMode {
+		pane.Background(t.Background)
+	} else {
+		pageSurface(c, pane)
+	}
+	pane.Children(func() {
+		if !a.focusMode {
+			a.documentToolbar(c, f)
+		}
 		a.recoveryNotice(c, f)
 		if a.conflicts[f.ID] && a.recovered[f.ID] == "" {
 			ui.Row(c).FillWidth().Padding(8, 18).Gap(10).AlignItems(ui.Center).Background(t.Warning.Alpha(0.12)).Children(func() {
@@ -233,7 +249,7 @@ func (a *App) editorPane(c *ui.Context, f *mdeditor.File) {
 				view := editor.View(c.Key(f.ID), st).Bind(&f.Focus).Grow(1).MaxWidth(a.appearance.Width).MinWidth(0).FillHeight()
 				// Arrow navigation previews documents without moving focus out of
 				// the file list. Enter in that list explicitly starts writing.
-				if !a.filesFocus.FocusWithin(c) || !a.sidebar || a.focusMode {
+				if (!a.filesFocus.FocusWithin(c) && !a.tabs.focus.FocusWithin(c)) || a.focusMode {
 					view.AutoFocus()
 				}
 			})

@@ -16,7 +16,7 @@ import (
 func TestWorkspace(t *testing.T) {
 	a := exampleApp()
 	tt := ui.NewTester(a.View, 1320, 840)
-	if !tt.HasText("markgo") || !tt.HasText("Welcome.md") {
+	if !tt.HasText("MarkGo") || !tt.HasText("Welcome.md") {
 		t.Fatalf("initial workspace texts %q", tt.Texts())
 	}
 	if err := tt.Click("Markdown Reference.md"); err != nil {
@@ -103,9 +103,6 @@ func TestFormattingToolbarAndShortcut(t *testing.T) {
 	start := strings.Index(before, "focused writing")
 	file.State.Select(start, start+len("focused writing"))
 	tt.Frame()
-	if err := tt.Click("Formatting"); err != nil {
-		t.Fatal(err)
-	}
 	if err := tt.Click("Bold"); err != nil {
 		t.Fatal(err)
 	}
@@ -114,6 +111,13 @@ func TestFormattingToolbarAndShortcut(t *testing.T) {
 	}
 	if !file.State.Buffer.Undo() || file.State.Buffer.String() != before {
 		t.Fatal("toolbar formatting was not one undoable edit")
+	}
+	file.State.Select(start, start+len("focused writing"))
+	tt.Frame()
+	click(t, tt, "Formatting")
+	click(t, tt, "Quote")
+	if a.formatOpen || !strings.Contains(file.State.Buffer.String(), "> ") || !file.State.Buffer.Undo() || file.State.Buffer.String() != before {
+		t.Fatal("paragraph menu did not close after one undoable action")
 	}
 	file.State.Select(start, start+len("focused writing"))
 	file.Focus.Focus()

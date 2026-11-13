@@ -42,7 +42,7 @@ This captures Paper, Warm paper and Graphite in recovery, recent, missing-file, 
 
 Headless tests do not prove native window, font, input-method, clipboard, file-dialog, or GPU behavior. Changes in those areas require a real application run and platform-specific evidence. Record the operating system, architecture, and display scale; do not infer macOS or Linux behavior from Windows verification alone.
 
-For the custom title bar, check dragging from blank areas and the document title, double-click maximize/restore, all resize edges, minimize/restore, maximize icon changes, and close with unsaved text. On Windows 11, check Snap layouts over the maximize button and at 100%, 150%, and 200% display scaling. In Focus mode the window buttons must remain reachable. Clicking or dragging a writing control must not drag the window. Neither a compiled executable nor a headless render establishes those OS behaviors.
+For the custom title bar, check dragging from blank areas, and verify document tabs do not initiate a window drag, double-click maximize/restore, all resize edges, minimize/restore, maximize icon changes, and close with unsaved text. On Windows 11, check Snap layouts over the maximize button and at 100%, 150%, and 200% display scaling. In Focus mode the window buttons must remain reachable. Clicking or dragging a writing control must not drag the window. Neither a compiled executable nor a headless render establishes those OS behaviors.
 
 ## Quality gates
 
@@ -69,3 +69,5 @@ go test ./internal/mdeditor -run '^$' -fuzz '^FuzzTypesettingIncrementalProjecti
 ```
 
 Inspect every captured scene across all three palettes. Fixed-length edit/undo cycles prevent faster implementations from benchmarking larger documents just because they complete more iterations. Compare the same workload, hardware, toolchain and iteration count, with no competing build/test jobs. Incremental projection tests compare against a fresh full parse, including edits to distant block context and Unicode source/view offsets. See [native typesetting](../development/native-typesetting.md) for evidence boundaries and the remaining native-platform gates.
+
+Document-tab regression checks cover independent buffers and undo, retained caret/scroll, guarded close actions, inactive versus active closure, duplicate filenames, arrow/Enter navigation, pointer cancellation and no-hover close targets, 24-document overflow and keyboard selection, resizing, and in-memory preview reopening. `TestWorkbenchTabsScreenshots` renders four multi-document scenes in every palette.

@@ -23,7 +23,7 @@ func Surface(c *ui.Context, panel ui.Element) ui.Element {
 		shadow = 0.28
 	}
 	return panel.Background(t.Background).Radius(PanelRadius).Border(1, t.Border).
-		Shadow(0, 10, 32, 0, ui.RGBA(0, 0, 0, shadow)).Transition(ui.ElementTransition{
+		NoShadow().Shadow(0, 10, 32, 0, ui.RGBA(0, 0, 0, shadow)).Transition(ui.ElementTransition{
 		Duration: 130 * time.Millisecond, ExitDuration: 90 * time.Millisecond, Colors: true,
 		Enter: &ui.Motion{Y: -4, Opacity: 0, Flip: true}, Exit: &ui.Motion{Y: -2, Opacity: 0, Flip: true},
 	})

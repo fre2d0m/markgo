@@ -7,8 +7,8 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-const titleBarHeight = 48
-const sidebarWidth = 224
+const titleBarHeight = 60
+const sidebarWidth = 240
 
 // Keep the OS frame's resize edges, rounded corners and shadow while drawing
 // the title bar and all three controls ourselves. A borderless window would

@@ -2,7 +2,9 @@
 
 ## Documents and folders
 
-MarkGo restores your previous documents and unfinished drafts. The first launch starts on a blank, focused document. Begin typing, or open the **Document menu** (the markgo wordmark and chevron at the top left) and choose **Open document…**. The plus beside Files creates another document. **Open a folder** at the foot of the sidebar shows Markdown files in a local folder and its subfolders. Built-in examples are available through **Document menu → Writing guide**. Filtering reveals matching files even inside collapsed folders; clearing the filter restores the previous expansion state. Use the refresh button after changing the folder outside MarkGo.
+MarkGo restores your previous documents and unfinished drafts. The first launch starts on a blank, focused document. Begin typing, or open the **Document menu** (the MarkGo icon and name at the top left) and choose **Open document…**. The plus after the document tabs or beside Files creates another document. **Open a folder** at the foot of the sidebar shows Markdown files in a local folder and its subfolders. Built-in examples are available through **Document menu → Writing guide**. Filtering reveals matching files even inside collapsed folders; clearing the filter restores the previous expansion state. Use the refresh button after changing the folder outside MarkGo.
+
+Each open document has a tab across the top. Switching tabs keeps each document's caret, selection, editing scroll and undo history. The dot marks unsaved changes; hovering the close target reveals its cross. Hover a title to see its full path. When many tabs are open, scroll horizontally or use **All open documents** beside the plus. The menu distinguishes identical filenames by their folder paths. **Control+Tab** and **Control+Shift+Tab** cycle documents on every platform. The selected tab stays visible after switching or resizing. Closing a tab follows the same unsaved-change protection as closing from the sidebar.
 
 In the open-document list, use the arrow keys, Home, and End to browse without losing list focus. Press Enter to begin writing in the selected document.
 
@@ -18,9 +20,9 @@ Read-mode anchors currently choose the first matching title when headings repeat
 
 Live preview keeps a single editable Markdown buffer and hides supported syntax when the caret is outside the formatted element. Moving into it reveals the original marks. **Document menu → Show Markdown source** toggles all marks. Task checkboxes update the Markdown source and can be undone.
 
-**Read** displays native Markdown typography, tables, code blocks, and local images. Choose **Edit** to change the source. Tables and images are not directly editable in the reading view. Formulas remain TeX text. Remote images are not automatically fetched; local image paths are resolved relative to the saved document.
+**Read** in the page toolbar displays native Markdown typography, tables, code blocks, and local images. Choose **Write** to change the source. Tables and images are not directly editable in the reading view. Formulas remain TeX text. Remote images are not automatically fetched; local image paths are resolved relative to the saved document.
 
-The **Formatting** icon opens a small toolbar above the page. It works on one selection or the current line, closes after an action, and returns focus to writing. Ordinary bullet and numbered lists, tasks, and quotes continue with Return. A second Return on an empty item exits that item. Four-space and tab-indented lines keep normal editor behavior, as do fenced code, comments, and multiple selections. Shift+Return always uses the editor's ordinary newline action.
+The page toolbar puts bold, italic, inline code and links within reach. **Formatting** at its right opens labeled heading, list and quote actions. Formatting works on one selection or the current line and returns focus to writing; the floating panel closes after an action. Ordinary bullet and numbered lists, tasks, and quotes continue with Return. A second Return on an empty item exits that item. Four-space and tab-indented lines keep normal editor behavior, as do fenced code, comments, and multiple selections. Shift+Return always uses the editor's ordinary newline action.
 
 **Find** opens document search. Its options include case matching, whole words, regular expressions, and selection scope. Choose **Replace** to show the replacement field. Replacing all matches is one undoable edit. Escape closes search and restores writing focus.
 
@@ -34,7 +36,7 @@ Escape closes the panel, and clicking outside returns to the page. The **Focus m
 
 Sidebar and tab transitions can be interrupted and follow the operating system's reduced-motion preference. The page is never faded or scaled. File and text context menus share the chosen theme.
 
-The title bar is drawn as part of the interface. Drag its empty space or document title to move the window; double-click to toggle maximization. Minimize, maximize/restore, and close remain at the top right, including in Focus mode. Closing the window keeps the normal unsaved-document protection.
+The title bar is drawn as part of the interface. Drag its empty space to move the window; double-click that space to toggle maximization. Document tabs and tools take clicks without dragging the window. Minimize, maximize/restore, and close remain at the top right, including in Focus mode. Closing the window keeps the normal unsaved-document protection.
 
 ## Saving
 
@@ -71,6 +73,7 @@ Use Command on macOS and Control on Windows/Linux for the shortcuts below.
 | Save | Cmd/Ctrl+S |
 | Save as | Cmd/Ctrl+Shift+S |
 | Close document | Cmd/Ctrl+W |
+| Next / previous document | Control+Tab / Control+Shift+Tab on all platforms |
 | Find | Cmd/Ctrl+F |
 | Bold / italic | Cmd/Ctrl+B / I |
 | Heading 1 / 2 | Cmd/Ctrl+1 / 2 |

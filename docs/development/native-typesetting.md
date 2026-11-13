@@ -1,6 +1,6 @@
 # Native typesetting checkpoint
 
-This is an isolated, runnable editing experiment, not a 1.0 beta release or the default document editor. It opens built-in samples only. Changes stay in memory and closing the preview discards them. It has no file associations, open/save callbacks, recovery store, appearance store or single-instance handoff.
+This is an isolated, runnable editing experiment, not a 1.0 beta release or the default document editor. It opens built-in samples and new in-memory pages only. Changes stay in memory and closing the preview discards them. It has no file associations, open/save callbacks, recovery store, appearance store or single-instance handoff.
 
 ## Try it
 
@@ -12,7 +12,7 @@ go tool mygo build -platform windows/amd64 -skip-installer ./cmd/markgo-preview
 
 The standalone application is **MarkGo Writing Preview**, under `build/typesetting-preview/`. The ordinary MarkGo executable also accepts `--typesetting-preview` as its first argument, before any real workspace initialization. Normal launches retain the existing editor.
 
-Edit the English or Chinese sample directly. Drag from a heading into a paragraph, replace the selection, undo, switch to Source, type, switch back, and undo again. The Blank page and Long read samples exercise the same editor. `Cmd/Ctrl+Shift+M` switches views; `Cmd/Ctrl+0/1/2/3` applies a paragraph or heading. Appearance and sample-sidebar controls retain the writing selection. Switching views or pages cancels unfinished composition and restores the original selection with an explanatory notice.
+The shared workbench includes document tabs and a page toolbar. Closing a sample tab keeps its edits available in Sample pages; the plus creates an in-memory page, never a real file. Ctrl+Tab cycles open pages. Edit the English or Chinese sample directly. Drag from a heading into a paragraph, replace the selection, undo, switch to Source, type, switch back, and undo again. The Blank page and Long read samples exercise the same editor. `Cmd/Ctrl+Shift+M` switches views; `Cmd/Ctrl+0/1/2/3` applies a paragraph or heading. Appearance and sample-sidebar controls retain the writing selection. Switching views or pages cancels unfinished composition and restores the original selection with an explanatory notice.
 
 The **A little structure** sample adds bullets, decimal steps and tasks. Return continues an item; Return in an empty item steps out one level. Tab/Shift+Tab moves an item and its descendants together. Backspace at an item start steps out too. The Paragraph style menu includes all three list kinds; `Cmd/Ctrl+Shift+8`, `+7`, and `+9` apply bullets, numbers and tasks. Click a checkbox or press `Cmd/Ctrl+Enter` at its item to toggle it. Every action shares Source mode's undo history.
 

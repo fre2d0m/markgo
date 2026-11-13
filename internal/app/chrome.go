@@ -12,79 +12,34 @@ func (a *App) header(c *ui.Context) {
 	t := c.Theme()
 	file := a.current()
 	ui.Row(c.Key("title-bar")).FillWidth().Height(titleBarHeight).DragWindow().AlignItems(ui.Center).Children(func() {
-		if !a.focusMode {
-			workspace := ui.Row(c.Key("workspace")).Width(sidebarWidth).Shrink(0).FillHeight().Padding(0, 12).AlignItems(ui.Center)
-			if a.sidebar {
-				workspace.Background(t.Surface)
-			}
-			workspace.Children(func() {
-				brand := writingui.Interactive(c, ui.ButtonBase(c.Key("workspace-menu")), false).Height(40).Padding(0, 8).KeepFocus().Label("Document menu").Tooltip("Document menu")
-				brand.Children(func() {
-					ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-						ui.Icon(c, icons["mark"]).Size(17, 17).TextColor(t.Text)
-						ui.Text(c, "markgo").FontSize(13).FontWeight(600).LetterSpacing(-0.3)
-						ui.Icon(c, icons["chevron"]).Size(12, 12).TextColor(t.TextMuted)
-					})
-				})
-				brand.PopoverMenuButton(a.documentMenu, ui.PopoverMenuButtonOptions{Panel: func(panel ui.Element) {
-					writingui.Surface(c, panel).Padding(8)
-				}})
-				ui.Spacer(c)
-				if iconButton(c, "sidebar", "sidebar", "Toggle file sidebar").Clicked() {
-					a.sidebar = !a.sidebar
-					if !a.sidebar && !a.reading {
-						file.Focus.Focus(c)
-					}
-				}
-			})
-		}
-		ui.Row(c.Key("document-title")).Grow(1).MinWidth(0).FillHeight().Padding(0, 20).Gap(7).AlignItems(ui.Center).Justify(ui.Center).Children(func() {
-			path := file.Path
-			if path == "" {
-				path = file.Name
-			}
-			ui.Text(c, file.Name).FontSize(12).FontWeight(500).TextColor(t.TextMuted).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0).Tooltip(path)
-			if file.Modified() {
-				ui.Box(c).Size(4, 4).Shrink(0).Radius(2).Background(t.TextMuted).Label("Unsaved changes").Tooltip("Unsaved changes — save with Cmd/Ctrl+S")
-			}
-		})
 		if a.focusMode {
-			if iconButton(c, "exit-focus", "exit-focus", "Exit focus mode").Clicked() {
-				a.focusMode = false
-			}
+			ui.Text(c, file.Name).FontSize(13).TextColor(t.TextMuted).Grow(1).MinWidth(0).PaddingStart(28).SingleLine().Ellipsis("…")
+			iconButton(c, "exit-focus", "exit-focus", "Exit focus mode").OnClick(func() { a.focusMode = false })
 			a.captionButtons(c)
 			return
 		}
-		ui.Row(c.Key("writing-tools")).Shrink(0).Gap(1).AlignItems(ui.Center).Children(func() {
-			if iconButton(c, "find", "search", "Find in document").Clicked() {
-				a.reading = false
-				file.State.Run(editor.Find)
-			}
-			format := stateIconButton(c, "format", "format", "Formatting", a.formatOpen)
-			if format.Clicked() {
-				a.formatOpen = !a.formatOpen
-				a.appearanceOpen = false
-				a.reading = false
-			}
-			ui.PopoverBase(c, format, &a.formatOpen, func(panel ui.Element) {
-				writingui.Surface(c, panel).Width(380).Padding(8).Margin(8, 0, 0).Children(func() { a.editorToolbar(c, file) })
-			})
-			readIcon, readLabel := "read", "Read document"
-			if a.reading {
-				readIcon, readLabel = "edit", "Edit document"
-			}
-			if stateIconButton(c, "read", readIcon, readLabel, a.reading).Clicked() {
-				a.reading = !a.reading
-				if !a.reading {
+		ui.Row(c.Key("workspace")).Width(sidebarWidth).Shrink(0).FillHeight().Padding(0, 12).AlignItems(ui.Center).Children(func() {
+			button := writingui.Interactive(c, ui.ButtonBase(c.Key("workspace-menu")), false).Height(44).Padding(0, 6).KeepFocus().Label("Document menu").Tooltip("Document menu")
+			button.Children(func() { ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() { brand(c) }) })
+			button.PopoverMenuButton(a.documentMenu, ui.PopoverMenuButtonOptions{Panel: func(panel ui.Element) { writingui.Surface(c, panel).Padding(8) }})
+			ui.Spacer(c)
+			iconButton(c, "sidebar", "sidebar", "Toggle file sidebar").OnClick(func() {
+				a.sidebar = !a.sidebar
+				if !a.sidebar && !a.reading {
 					file.Focus.Focus(c)
 				}
-			}
-			if iconButton(c, "focus", "focus", "Focus mode").Clicked() {
+			})
+		})
+		services := c.Services()
+		documentTabs(c, &a.tabs, a.files, a.selected, a.fileBusy, a.selectDocument, a.closeDocument, a.newDocument, func(menu *ui.Menu, file *mdeditor.File) { a.fileMenu(services, menu, file) })
+		ui.Row(c.Key("window-tools")).Shrink(0).PaddingStart(8).Gap(2).AlignItems(ui.Center).Children(func() {
+			iconButton(c, "find", "search", "Find in document").OnClick(func() { a.reading = false; file.State.Run(editor.Find) })
+			iconButton(c, "focus", "focus", "Focus mode").OnClick(func() {
 				a.focusMode = true
 				if !a.reading {
 					file.Focus.Focus(c)
 				}
-			}
+			})
 			appearance := stateIconButton(c, "appearance", "appearance", "Appearance", a.appearanceOpen)
 			if appearance.Clicked() {
 				a.appearanceOpen = !a.appearanceOpen
@@ -98,6 +53,42 @@ func (a *App) header(c *ui.Context) {
 		})
 		a.captionButtons(c)
 	})
+}
+
+func (a *App) documentToolbar(c *ui.Context, file *mdeditor.File) {
+	t := c.Theme()
+	ui.Row(c.Key("document-toolbar")).FillWidth().Height(56).Padding(6, 16).Gap(12).AlignItems(ui.Center).Children(func() {
+		ui.Row(c.Key("writing-mode")).Height(44).Padding(2).Gap(2).Radius(10).Background(t.Surface).Shrink(0).Children(func() {
+			for _, mode := range []struct {
+				label, name string
+				reading     bool
+			}{{"Edit document", "Write", false}, {"Read document", "Read", true}} {
+				button := appearanceSegment(c.Key(mode.name), mode.label, a.reading == mode.reading).Width(62)
+				button.Children(func() { ui.Text(c, mode.name).FontSize(12).FontWeight(500) })
+				button.OnClick(func() {
+					a.reading = mode.reading
+					if !a.reading {
+						file.Focus.Focus(c)
+					}
+				})
+			}
+		})
+		if !a.reading {
+			ui.Box(c).Size(1, 20).Background(t.Border)
+			ui.Row(c.Key("quick-formatting")).Width(166).Shrink(0).Children(func() { a.editorToolbar(c, file) })
+		}
+		ui.Spacer(c)
+		format := stateIconButton(c, "format", "more", "Formatting", a.formatOpen)
+		if format.Clicked() {
+			a.formatOpen = !a.formatOpen
+			a.appearanceOpen = false
+			a.reading = false
+		}
+		ui.PopoverBase(c, format, &a.formatOpen, func(panel ui.Element) {
+			writingui.Surface(c, panel).Width(248).Padding(8).Margin(8, 0, 0).Children(func() { a.blockFormatting(c, file) })
+		})
+	})
+	ui.Box(c).FillWidth().Height(1).MarginX(16).Background(t.Border.Alpha(0.55))
 }
 
 func (a *App) documentMenu(m *ui.Menu) {
@@ -188,8 +179,8 @@ func (a *App) documentList(c *ui.Context) {
 	files := a.visibleFiles()
 	// Preserve the Sidebar's keyboard model with a quieter selection color.
 	listTheme := *t
-	listTheme.Accent, listTheme.InactiveAccent, listTheme.AccentText = t.SurfaceHover, t.SurfaceHover, t.Text
-	listTheme.SurfacePressed = t.SurfaceHover
+	listTheme.AccentText = t.Text
+	listTheme.SurfacePressed = t.Background
 	listScope := ui.Themed(c, &listTheme).Background(t.Surface).MinHeight(0)
 	if a.folder == nil {
 		listScope.Grow(1)
@@ -203,10 +194,13 @@ func (a *App) documentList(c *ui.Context) {
 				if file.Modified() {
 					label += "  •"
 				}
-				row := ui.SidebarItem(c.Key(file.ID), file.ID, nil, label).Height(40).PaddingEnd(0).Radius(8).FontSize(13).Label("Document " + file.Name)
+				row := ui.SidebarItem(c.Key(file.ID), file.ID, icons["file"], label).Height(40).PaddingEnd(0).Radius(8).FontSize(13).Label("Document " + file.Name)
 				path := file.Path
 				if path == "" {
 					path = file.Name
+				}
+				if file.ID == a.selected {
+					row.Background(t.Background).TextColor(t.Text).Border(1, t.Border)
 				}
 				row.Tooltip(path).ContextMenu(func(m *ui.Menu) { a.fileMenu(services, m, file) })
 				showClose := row.Hovered() || file.ID == a.selected || c.Preferences().NoHover
