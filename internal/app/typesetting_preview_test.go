@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/egoist/mygo/ui"
 	"github.com/xddcode/markgo/internal/mdeditor"
@@ -135,15 +136,22 @@ func TestTypesettingScreenshots(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, theme := range []string{"paper", "warm", "graphite"} {
-		for _, scene := range []string{"writing", "chinese", "selection", "source", "appearance", "paragraph", "empty", "notice", "focus", "composition", "syntax", "long", "long-middle", "large-book", "list", "list-narrow", "list-tasks", "list-selection", "list-empty", "list-source", "list-large", "list-menu", "list-notice"} {
+		for _, scene := range []string{"writing", "chinese", "selection", "source", "appearance", "paragraph", "empty", "notice", "focus", "composition", "syntax", "long", "long-middle", "large-book", "list", "list-narrow", "list-tasks", "list-selection", "list-empty", "list-source", "list-large", "list-menu", "list-notice", "blocks", "blocks-narrow", "blocks-source", "quote-empty", "quote-deep", "code-empty", "code-language", "code-error", "code-copied", "code-large", "code-selection", "code-composition"} {
 			p := NewTypesettingPreview()
 			p.shell.appearance.Theme = theme
 			w, h := 1320, 840
-			if scene != "writing" && scene != "chinese" && scene != "list" {
+			if scene != "writing" && scene != "chinese" && scene != "list" && scene != "blocks" {
 				w, h = 960, 640
 			}
 			if strings.HasPrefix(scene, "list") {
 				p.selected = 5
+			}
+			if strings.HasPrefix(scene, "blocks") || strings.HasPrefix(scene, "quote") || strings.HasPrefix(scene, "code") {
+				p.selected = 6
+			}
+			if strings.HasPrefix(scene, "code") {
+				p.current().file.State.Buffer.Set("# A small experiment\n\nA place to try an idea, one line at a time.\n\n```go\nfunc begin() {\n    fmt.Println(\"慢一点，写下来。\")\n}\n```\n\nContinue when you are ready.")
+				p.current().typesetter.FromSource()
 			}
 			switch scene {
 			case "chinese", "composition":
@@ -172,6 +180,20 @@ func TestTypesettingScreenshots(t *testing.T) {
 				p.current().typesetter.FromSource()
 			case "list-notice":
 				p.current().file.State.Buffer.Set("# Markdown stays yours\n\n```md\n- This is code, not an editable list.\n```\n")
+				p.current().typesetter.FromSource()
+			case "quote-empty":
+				p.current().file.State.Buffer.Set("# A voice on the page\n\n> Leave room for the next thought.\n> ")
+				p.current().typesetter.FromSource()
+			case "quote-deep":
+				p.current().file.State.Buffer.Set("# Another voice\n\n> 留下真正打动你的那一句。\n>\n> > 一点观察，一点好奇。把还没想清楚的念头写下来，让它慢慢生长。\n> > > There is room for a different perspective.")
+				p.current().typesetter.FromSource()
+			case "code-empty":
+				p.current().file.State.Buffer.Set("# A small experiment\n\n```\n```\n\nStart with one line.")
+				p.current().typesetter.FromSource()
+			case "code-large":
+				p.shell.appearance.FontSize = 24
+				p.shell.appearance.Serif = true
+				p.current().file.State.Buffer.Set("# Space to experiment\n\n```python\nmessage = \"让还没想清楚的念头在纸上慢慢变得清晰，让每一行长一点的文字也有自己的空间。\"\nprint(message)\n```")
 				p.current().typesetter.FromSource()
 			}
 			tt := ui.NewTester(p.View, w, h)
@@ -220,6 +242,39 @@ func TestTypesettingScreenshots(t *testing.T) {
 				doc.SetSelection(doc.Text().Len()-2, doc.Text().Len()-2)
 				p.current().typesetter.SetList(mdeditor.TaskList)
 				tt.Frame()
+			case "blocks-source":
+				click(t, tt, "Source mode")
+			case "quote-empty":
+				doc := p.current().typesetter.Document
+				doc.SetSelection(doc.Text().Len(), doc.Text().Len())
+				tt.Frame()
+			case "code-empty", "code-language", "code-error", "code-copied", "code-selection", "code-composition":
+				doc := p.current().typesetter.Document
+				shown := doc.Text().String()
+				at := utf8.RuneCountInString("A small experiment\n\n")
+				if scene != "code-empty" {
+					at = utf8.RuneCountInString(shown[:strings.Index(shown, "func begin")])
+				}
+				doc.SetSelection(at, at)
+				tt.Frame()
+				switch scene {
+				case "code-language", "code-error":
+					click(t, tt, "Code language: go")
+					if scene == "code-error" {
+						tt.Key(ui.Cmd, ui.KeyA)
+						tt.Type("not a language")
+						click(t, tt, "Apply code language")
+					}
+				case "code-copied":
+					click(t, tt, "Copy code")
+				case "code-selection":
+					doc.SetSelection(at+8, at+40)
+					tt.Frame()
+				case "code-composition":
+					doc.SetSelection(at+14, at+14)
+					tt.Frame()
+					tt.Compose("xiezuo", 6)
+				}
 			}
 			tt.Advance(200 * time.Millisecond)
 			out, err := os.Create(filepath.Join(dir, theme+"-"+scene+".png"))

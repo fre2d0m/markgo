@@ -31,6 +31,9 @@ Read `.agents/skills/mygo-maintenance/SKILL.md` before changing UI code. Confirm
 - Typesetting projection changes must retain untouched source and paragraph layouts; compare incremental edits against a fresh parse, including distant fence/front-matter effects and Unicode offsets. Benchmark fixed edit/undo workloads separately from native input latency.
 - Structured lists come from parser-confirmed items. Preserve original markers and written numbers; display semantic decimal numbering at every depth. Prefix/indentation changes, task toggles and their necessary Markdown separators belong to source history, never a rich-text serializer.
 - Task controls keep the writing focus and selection, use non-overlapping 40 DIP targets, and leave the document still. Verify pointer cancellation, keyboard toggling, source-mode undo, whole-item clipboard syntax and native text-service hit geometry after layout changes.
+- Structured quotes and top-level fenced code share the same source history. Hidden fence lines must not create fake editable paragraphs; empty fences need a virtual caret without no-op source changes. Retain fence characters, info suffixes, body whitespace and line endings.
+- Literal fences typed or pasted into code extend both delimiters together. Edits across one boundary remove its surviving paired fence in the same transaction; verify multi-block, reversed-selection undo.
+- Code headers use 40 DIP targets and native vector icons. Language changes, Escape and Continue return focus to the preserved writing selection. Keep clipboard feedback local to the code header and do not animate the document.
 
 ## Commands
 

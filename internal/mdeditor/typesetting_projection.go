@@ -14,6 +14,7 @@ type typesetLine struct {
 	viewStart, viewByte int // projected rune and byte offsets
 	runes, heading      int // visible length; ATX level
 	list                typesetListStyle
+	block               typesetBlockLine
 }
 
 type typesetProjection struct {
@@ -24,6 +25,9 @@ type typesetProjection struct {
 	listLines    []typesetListLine
 	items        []typesetListItem
 	listNumber   int
+	blockLines   []typesetBlockLine
+	codes        []typesetCode
+	visible      []int // display paragraph -> physical source line
 }
 
 func projectTypesetting(source string) typesetProjection {
@@ -71,7 +75,6 @@ func (p *typesetProjection) update(source string) {
 	start, oldEnd, newEnd := changedText(p.source, source, len(p.source))
 	first, last := p.sourceLine(start), p.sourceLine(oldEnd)
 	oldFirst, oldLast := p.lines[first], p.lines[last]
-	oldStartByte, oldEndByte := oldFirst.viewByte, oldLast.viewByte+oldLast.end-oldLast.content
 	delta := newEnd - oldEnd
 	regionStart, regionEnd := oldFirst.start, oldLast.end+delta
 	region := source[regionStart:regionEnd]
@@ -82,11 +85,12 @@ func (p *typesetProjection) update(source string) {
 		if first+len(replaced) <= last {
 			heading = p.lines[first+len(replaced)].heading
 		}
-		list := typesetListStyle{}
+		list, block := typesetListStyle{}, typesetBlockLine{}
 		if first+len(replaced) <= last {
 			list = p.lines[first+len(replaced)].list
+			block = p.lines[first+len(replaced)].block
 		}
-		replaced = append(replaced, typesetLine{start: offset, content: offset, end: offset + len(line), heading: heading, list: list})
+		replaced = append(replaced, typesetLine{start: offset, content: offset, end: offset + len(line), heading: heading, list: list, block: block})
 		offset += len(line) + 1
 	}
 	styleChanged := len(replaced) != last-first+1
@@ -100,8 +104,8 @@ func (p *typesetProjection) update(source string) {
 	p.parsed.Set(source)
 	frontEnd := frontMatterEnd(source)
 	p.projectLists(source, frontEnd)
-	block, viewStart, viewByte := 1, 0, 0
-	changedFirst, changedLast := first, newLast
+	p.projectBlocks(source, frontEnd)
+	block := 1
 	for i := range p.lines {
 		line := &p.lines[i]
 		for block < p.parsed.Len() && p.parsed.Block(block).Start < line.start {
@@ -132,38 +136,60 @@ func (p *typesetProjection) update(source string) {
 		} else if line.list.kind != NoList && level == 0 {
 			content = line.start
 		}
-		if touched || level != line.heading || list.style != line.list || content != line.content {
-			if !touched {
-				oldStartByte = min(oldStartByte, line.viewByte)
-				oldEndByte = max(oldEndByte, line.viewByte+line.end-line.content)
-				changedFirst, changedLast = min(changedFirst, i), max(changedLast, i)
-			}
-			styleChanged = styleChanged || level != line.heading || list.style != line.list
-			line.content, line.heading, line.list = content, level, list.style
+		structure := p.blockLines[i]
+		if structure != (typesetBlockLine{}) {
+			content = line.start + structure.prefix
+		} else if line.block != (typesetBlockLine{}) && level == 0 && list.style.kind == NoList {
+			content = line.start
+		}
+		if touched || level != line.heading || list.style != line.list || structure != line.block || content != line.content {
+			styleChanged = styleChanged || level != line.heading || list.style != line.list || structure != line.block
+			line.content, line.heading, line.list, line.block = content, level, list.style, structure
 			line.runes = utf8.RuneCountInString(source[content:line.end])
 		}
-		line.viewStart, line.viewByte = viewStart, viewByte
-		viewStart += line.runes + 1
-		viewByte += line.end - line.content + 1
 	}
+	// Hidden fence lines do not create fake editable paragraphs. The compact
+	// physical records remain authoritative for source edits; visible indexes
+	// address native paragraphs and keep their retained layout on text patches.
+	oldCount := len(p.visible)
+	p.visible = p.visible[:0]
+	var shown strings.Builder
+	shown.Grow(len(source))
+	viewStart := 0
+	for i := range p.lines {
+		line := &p.lines[i]
+		if line.block.hidden {
+			continue
+		}
+		if len(p.visible) > 0 {
+			shown.WriteByte('\n')
+			viewStart++
+		}
+		line.viewStart, line.viewByte = viewStart, shown.Len()
+		shown.WriteString(source[line.content:line.end])
+		viewStart += line.runes
+		p.visible = append(p.visible, i)
+	}
+	for _, code := range p.codes {
+		first, last := p.lines[code.first], p.lines[code.last]
+		if p.lines[code.open].block.hidden {
+			p.lines[code.open].viewStart, p.lines[code.open].viewByte = first.viewStart, first.viewByte
+		}
+		if code.close >= 0 {
+			p.lines[code.close].viewStart = last.viewStart + last.runes
+			p.lines[code.close].viewByte = last.viewByte + last.end - last.content
+		}
+	}
+	styleChanged = styleChanged || oldCount != len(p.visible)
 	if styleChanged {
 		p.styleVersion++
 	}
-	var shown strings.Builder
-	shown.Grow(p.lines[changedLast].end - p.lines[changedFirst].start)
-	for i := changedFirst; i <= changedLast; i++ {
-		if i != changedFirst {
-			shown.WriteByte('\n')
-		}
-		line := p.lines[i]
-		shown.WriteString(source[line.content:line.end])
-	}
-	p.text = p.text[:oldStartByte] + shown.String() + p.text[oldEndByte:]
+	p.text = shown.String()
 	p.source = source
 }
 
 func (p *typesetProjection) len() int {
-	line := p.lines[len(p.lines)-1]
+	line := p.lines[p.visible[len(p.visible)-1]]
 	return line.viewStart + line.runes
 }
 
@@ -176,8 +202,8 @@ func (p *typesetProjection) sourceLine(offset int) int {
 // that prefix as well. Only the selected line needs rune/byte conversion.
 func (p *typesetProjection) sourceOffset(runeOffset int) int {
 	runeOffset = max(0, min(runeOffset, p.len()))
-	i := max(0, sort.Search(len(p.lines), func(i int) bool { return p.lines[i].viewStart > runeOffset })-1)
-	line := p.lines[i]
+	i := max(0, sort.Search(len(p.visible), func(i int) bool { return p.lines[p.visible[i]].viewStart > runeOffset })-1)
+	line := p.lines[p.visible[i]]
 	return line.content + runeByte(p.source[line.content:line.end], runeOffset-line.viewStart)
 }
 

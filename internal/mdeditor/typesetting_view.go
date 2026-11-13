@@ -23,7 +23,8 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 	options := richtext.EditorOptions{
 		Label: "Typeset document", Placeholder: "A thought, a sentence, a beginning…",
 		NoMarkdown: true, Font: font,
-		Theme: &richtext.Theme{Text: th.Text, Caret: th.Text, Selection: th.Selection, ParagraphSpacing: 0.12},
+		Theme: &richtext.Theme{Text: th.Text, Caret: th.Text, Selection: th.Selection, ParagraphSpacing: 0.12,
+			CodeFont: "monospace", CodeSize: 0.9, CodeBlockBackground: th.Surface, CodeBlockRadius: 8 / font.Size, CodeBlockPadding: [2]float32{16 / font.Size, 10 / font.Size}},
 		OnKey: func(key ui.Key, mods ui.Modifiers) bool { return t.key(key, mods, services) },
 		Menu: func(m *ui.Menu) {
 			if m.Item("Undo").Disabled(!t.Source.Buffer.CanUndo()).Chosen() {
@@ -56,6 +57,12 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 			if m.Item("Toggle task").Chosen() {
 				t.ToggleTask(-1)
 			}
+			if m.Item("Quote").Chosen() {
+				t.Quote()
+			}
+			if m.Item("Code block").Chosen() {
+				t.CodeBlock()
+			}
 			m.Separator()
 			if m.Item("Select all").Chosen() {
 				t.Document.SetSelection(0, t.Document.Text().Len())
@@ -64,30 +71,39 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 		SpansVersion: t.projection.styleVersion,
 		Spans: func(p int, _ richtext.ParagraphStyle, spans []ui.Span) []ui.Span {
 			size, weight := font.Size, 400
-			if p < len(t.projection.lines) {
-				level := t.projection.lines[p].heading
+			family := font.Family
+			line, exists := t.projection.shownLine(p)
+			if exists {
+				level := line.heading
 				if level > 0 {
 					size *= [...]float32{1, 2, 1.45, 1.2, 1.08, 1, 1}[level]
 					weight = 600
 				}
+				if line.block.code > 0 {
+					family, size = "monospace", font.Size*0.9
+				}
 			}
 			color := th.Text
-			if p < len(t.projection.lines) && t.projection.lines[p].list.checked {
+			if exists && line.list.checked {
 				color = th.TextMuted
 			}
 			for i := range spans {
-				spans[i] = ui.Span{Text: spans[i].Text, Font: font.Family, Size: size, Weight: weight, Color: color, Underline: t.composing && spans[i].Underline}
+				spans[i] = ui.Span{Text: spans[i].Text, Font: family, Size: size, Weight: weight, Color: color, Underline: t.composing && spans[i].Underline}
 			}
 			return spans
 		},
 		Space: func(p int) float32 {
-			if p >= len(t.projection.lines) {
+			line, ok := t.projection.shownLine(p)
+			if !ok {
 				return 0
 			}
-			if t.projection.lines[p].list.kind != NoList && t.projection.lines[p].list.kind != listContinuation {
+			if line.block.code > 0 && t.projection.visible[p] == t.projection.codes[line.block.code-1].first {
+				return 44
+			}
+			if line.list.kind != NoList && line.list.kind != listContinuation {
 				return max(0, 40-font.Size*font.LineHeight)
 			}
-			if p > 0 && t.projection.lines[p].heading > 0 {
+			if p > 0 && line.heading > 0 {
 				return font.Size * 0.65
 			}
 			return 0
@@ -99,6 +115,8 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 	options.Theme.Indent = t.input.gutter / font.Size
 	view := richtext.EditorBase(c, t.Document, options).Bind(&t.input.handle).HandleTextInput(&t.input).ObserveInput(func(ev ui.InputEvent) { t.observe(ev, services) }).Clip()
 	t.listMarkers(c, view, font)
+	t.quoteBars(c, view)
+	t.codeHeaders(c, view)
 	return view
 }
 
@@ -176,17 +194,26 @@ func (t *Typesetter) key(key ui.Key, mods ui.Modifiers, services ui.Services) bo
 			case ui.Key9, ui.KeyL:
 				t.SetList(TaskList)
 				return true
-			}
-		}
-		if key == ui.KeyEnter && mods == ui.Cmd {
-			return t.ToggleTask(-1)
-		}
-		if (key == ui.KeyTab && (mods == 0 || mods == ui.Shift)) || (mods == ui.Cmd && (key == ui.KeyBracketLeft || key == ui.KeyBracketRight)) {
-			if t.IndentList(mods == ui.Shift || key == ui.KeyBracketLeft) {
+			case ui.KeyQ:
+				t.Quote()
+				return true
+			case ui.KeyK:
+				t.CodeBlock()
 				return true
 			}
 		}
-		if key == ui.KeyEnter && mods == 0 && t.listEnter() {
+		if key == ui.KeyEnter && mods == ui.Cmd {
+			if t.ContinueAfterCode(-1) {
+				return true
+			}
+			return t.ToggleTask(-1)
+		}
+		if (key == ui.KeyTab && (mods == 0 || mods == ui.Shift)) || (mods == ui.Cmd && (key == ui.KeyBracketLeft || key == ui.KeyBracketRight)) {
+			if t.indentBlocks(mods == ui.Shift || key == ui.KeyBracketLeft) {
+				return true
+			}
+		}
+		if key == ui.KeyEnter && mods == 0 && (t.codeEnter() || t.quoteEnter() || t.listEnter()) {
 			return true
 		}
 	}
@@ -216,6 +243,17 @@ func (t *Typesetter) key(key ui.Key, mods ui.Modifiers, services ui.Services) bo
 	}
 	index := t.projection.sourceLine(t.projection.sourceOffset(z))
 	line := t.projection.lines[index]
+	if key == ui.KeyBackspace && z == line.viewStart {
+		if code, ok := t.projection.codeAt(index); ok && index == code.first {
+			t.CodeBlock()
+			return true
+		}
+		if line.block.quote > 0 {
+			t.ToSource()
+			t.changeQuote(index, index, true)
+			return true
+		}
+	}
 	if key == ui.KeyBackspace && line.list.kind != NoList && z == line.viewStart {
 		if line.list.kind == listContinuation && z > 0 {
 			t.Document.SetSelection(z-1, z)
@@ -243,4 +281,8 @@ func (t *Typesetter) key(key ui.Key, mods ui.Modifiers, services ui.Services) bo
 		}
 	}
 	return false
+}
+
+func (t *Typesetter) indentBlocks(remove bool) bool {
+	return t.indentCode(remove) || t.indentQuote(remove) || t.IndentList(remove)
 }

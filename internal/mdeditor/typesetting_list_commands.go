@@ -78,9 +78,9 @@ func shiftListIndent(line string, columns int) string {
 	return strings.Repeat(" ", width) + line[at:]
 }
 
-// applyListLines changes only affected prefixes/indentation. Buffer.Edit keeps
+// applyLineChanges changes only affected prefixes/indentation. Buffer.Edit keeps
 // all replacements in one source-history step; selections keep their direction.
-func (t *Typesetter) applyListLines(lines map[int]string) {
+func (t *Typesetter) applyLineChanges(lines map[int]string) {
 	indices := make([]int, 0, len(lines))
 	for i := range lines {
 		indices = append(indices, i)
@@ -214,7 +214,7 @@ func (t *Typesetter) IndentList(outdent bool) bool {
 			lines[first.line] = "\n" + lines[first.line]
 		}
 	}
-	t.applyListLines(lines)
+	t.applyLineChanges(lines)
 	return true
 }
 
@@ -357,7 +357,7 @@ func (t *Typesetter) setListItems(items []typesetListItem, kind ListKind) {
 			}
 		}
 	}
-	t.applyListLines(lines)
+	t.applyLineChanges(lines)
 }
 
 // ToggleTask changes exactly the source marker; clicking keeps the writing
@@ -377,6 +377,6 @@ func (t *Typesetter) ToggleTask(lineIndex int) bool {
 	if raw[at] != ' ' {
 		mark = " "
 	}
-	t.applyListLines(map[int]string{item.line: raw[:at] + mark + raw[at+1:]})
+	t.applyLineChanges(map[int]string{item.line: raw[:at] + mark + raw[at+1:]})
 	return true
 }

@@ -25,10 +25,10 @@ func (t *Typesetter) listMarkers(c *ui.Context, view ui.Element, font ui.Font) {
 	th := c.Theme()
 	view.Children(func() {
 		for _, box := range boxes {
-			if box.Index >= len(t.projection.lines) {
+			line, ok := t.projection.shownLine(box.Index)
+			if !ok {
 				continue
 			}
-			line := t.projection.lines[box.Index]
 			style := line.list
 			if style.kind == NoList || style.kind == listContinuation {
 				continue
@@ -37,7 +37,7 @@ func (t *Typesetter) listMarkers(c *ui.Context, view ui.Element, font ui.Font) {
 			x := float32(style.depth) * gutter
 			y := box.Top + (font.Size*font.LineHeight-listGutter)/2
 			if style.kind == TaskList {
-				idx := box.Index
+				idx := t.projection.visible[box.Index]
 				label := "Toggle task: " + t.projection.source[line.content:line.end]
 				button := ui.ButtonBase(c.Key(fmt.Sprintf("task-%d", idx))).Absolute().Left(x+gutter-listGutter).Top(y).Size(listGutter, listGutter).KeepFocus().TabStop(false).Role(ui.RoleCheckBox).Checked(style.checked).Label(label).Tooltip("Toggle task · Cmd/Ctrl+Enter").Radius(7)
 				// Stop the ancestor rich-text handler from taking this press as

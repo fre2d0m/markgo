@@ -48,7 +48,7 @@ func TestTypesettingLongDocumentRetainsEditPosition(t *testing.T) {
 func checkProjection(t testing.TB, p *typesetProjection, source string) {
 	t.Helper()
 	want := projectTypesetting(source)
-	if p.source != source || p.text != want.text || !slices.Equal(p.lines, want.lines) || !slices.Equal(p.listLines, want.listLines) || !slices.Equal(p.items, want.items) || p.listNumber != want.listNumber {
+	if p.source != source || p.text != want.text || !slices.Equal(p.lines, want.lines) || !slices.Equal(p.listLines, want.listLines) || !slices.Equal(p.items, want.items) || p.listNumber != want.listNumber || !slices.Equal(p.blockLines, want.blockLines) || !slices.Equal(p.codes, want.codes) || !slices.Equal(p.visible, want.visible) {
 		t.Fatalf("incremental projection differs from full parse for %q\n got %q\nwant %q", source, p.text, want.text)
 	}
 	for i := 0; i <= want.len(); i++ {
@@ -77,6 +77,8 @@ func TestTypesettingIncrementalProjectionContextChanges(t *testing.T) {
 		"3. one\n1. two\n\n   7) nested\n   1) next\n\n- [X] 中文🙂\n- [ ] \n",
 		"- parent\n  - child\n\n  ```md\n  - literal\n  ```\n\n> - quote",
 		"- parent\n\t- child\n\t  continued\n\n999999999. last",
+		"> first\n> > 中文🙂\n> lazy\n>\n\n```\n```\n\nafter",
+		"  ~~~~ go extra\n  # literal\n\t中🙂\n  ~~~~~~\n\n```python\n",
 	}
 	for _, source := range fixtures {
 		for _, insert := range []string{"\n", "# ", "```\n", "---\n", "<!--\n", "中文🙂", "\t", "\n\n"} {
@@ -103,6 +105,8 @@ func FuzzTypesettingIncrementalProjection(f *testing.F) {
 		"---\n# metadata\n---\n\n```go\n# literal\n```\n\n# Tail",
 		"- item\n  ## nested\n\n> # quote\n\nSetext\n====\n",
 		"3. one\n1. two\n   - [X] child🙂\n   - [ ] \n\n999999999) last",
+		"> first\n> > 中文🙂\n> lazy\n>\n\n```\n```\n\nafter",
+		"  ~~~~ go extra\n  # literal\n\t中🙂\n  ~~~~~~\n\n```python\n",
 	} {
 		f.Add(seed, []byte{0, 3, 7, 12, 9, 30, 255, 1, 11})
 	}
