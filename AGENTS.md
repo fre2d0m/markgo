@@ -40,7 +40,7 @@ go tool mygo build
 
 ## Repository layout
 
-- `cmd/markgo`: executable entry and window configuration.
+- `cmd/markgo`: executable entry; `internal/app.WindowOptions` owns the self-drawn window configuration.
 - `internal/app`: workbench state, views, themes, and UI behavior tests.
 - `internal/mdeditor`: Markdown document editor state and live-preview replacements.
 - `internal/storage`: UTF-8 file snapshots, guarded saving, and folder enumeration.

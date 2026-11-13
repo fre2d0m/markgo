@@ -20,9 +20,12 @@ func (a *App) editorToolbar(c *ui.Context, file *mdeditor.File) {
 		if item.Hovered() {
 			item.Background(t.SurfaceHover)
 		}
+		if item.Pressed() {
+			item.Background(t.SurfacePressed)
+		}
 		item.Children(func() {
 			if icon := icons[id]; icon != nil {
-				ui.Icon(c, icon).Size(18, 18).TextColor(t.Text)
+				ui.Icon(c, icon).Size(17, 17).TextColor(t.Text)
 			} else {
 				ui.Text(c, text).FontSize(12).FontWeight(500).TextColor(t.Text)
 			}

@@ -17,6 +17,14 @@ CGO_ENABLED=0 go test ./... -count=1
 go tool mygo build
 ```
 
+To build a portable Windows x64 directory from any supported development host:
+
+```sh
+go tool mygo build -platform windows/amd64 -skip-installer
+```
+
+Distribute the complete `build/windows-amd64/` directory, including its resources. Cross-compiling does not replace a Windows desktop check.
+
 Run the local quality gate before submitting a pull request:
 
 ```sh

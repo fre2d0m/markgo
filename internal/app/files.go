@@ -14,6 +14,10 @@ import (
 // Attach connects native dialogs and close protection after the window exists.
 func (a *App) Attach(window *mygo.Window) {
 	a.window = window
+	a.windowCommands = window
+	a.windowMaximized = window.IsMaximized()
+	window.OnMaximize(func() { a.windowMaximized = true; window.Invalidate() })
+	window.OnUnmaximize(func() { a.windowMaximized = false; window.Invalidate() })
 	window.OnFileDrop(func(event *mygo.FileDropEvent) {
 		for _, path := range event.Paths {
 			a.OpenFile(path)
