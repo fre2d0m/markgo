@@ -2,9 +2,11 @@ package app
 
 import (
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+	"github.com/egoist/mygo/ui/markdown"
 	"github.com/xddcode/markgo/internal/mdeditor"
 	"github.com/xddcode/markgo/internal/storage"
 )
@@ -64,20 +66,39 @@ func (a *App) outlineSidebar(c *ui.Context, file *mdeditor.File) {
 	}
 	ui.Scroll(c).Grow(1).MinHeight(0).Children(func() {
 		ui.Column(c).FillWidth().Gap(2).Children(func() {
-			for _, heading := range analysis.Headings {
+			active := -1
+			if !a.reading && ready {
+				for index, heading := range analysis.Headings {
+					if heading.Offset <= file.State.Cursor() {
+						active = index
+					}
+				}
+			}
+			for index, heading := range analysis.Headings {
 				heading := heading
 				item := ui.ButtonBase(c.Key(heading.Offset)).FillWidth().MinHeight(40).
 					Padding(6, 8).PaddingStart(float32(8 + min(heading.Level-1, 4)*12)).
 					Radius(t.Radius).Disabled(!ready).Label("Go to " + heading.Title)
-				if item.Hovered() {
-					item.Background(t.SurfaceHover)
+				background := ui.Transparent
+				if item.Hovered() || index == active {
+					background = t.SurfaceHover
 				}
+				item.Background(item.AnimateColor("active-section", background, ui.Animation{Duration: 120 * time.Millisecond, NonMotion: true}))
 				item.Children(func() {
-					ui.Text(c, heading.Title).FontSize(12).SingleLine().Ellipsis("…").TextColor(t.Text)
+					weight := 400
+					if index == active {
+						weight = 500
+					}
+					ui.Text(c, heading.Title).FillWidth().FontSize(12).FontWeight(weight).SingleLine().Ellipsis("…").TextColor(t.Text)
 				})
 				if item.Clicked() {
-					file.State.GoTo(file.State.Buffer.Pos(heading.Offset))
-					file.Focus.Focus(c)
+					if a.reading {
+						file.Reader.Anchor = markdown.Slug(heading.Title)
+						file.Reader.AnchorVersion++
+					} else {
+						file.State.GoTo(file.State.Buffer.Pos(heading.Offset))
+						file.Focus.Focus(c)
+					}
 				}
 			}
 		})

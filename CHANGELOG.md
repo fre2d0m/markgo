@@ -6,6 +6,8 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- Interruptible sidebar motion, a moving Files/Outline indicator, file-row close and context actions, and brief confirmation after a current-version save.
+- A beta delivery plan with data-safety, native editor, output and platform acceptance gates.
 - Paper, Warm paper, and Graphite themes with a system-following option, local preference persistence, text-size controls, Modern/Book typography, and three page widths.
 - Original monochrome interface icons and a paper-and-ink application icon.
 - Appearance and sidebar shortcuts; source/selection/scroll/undo and preference-persistence regression coverage.
@@ -31,6 +33,7 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Fixed
 
+- Outline navigation in reading mode now addresses the reading view; editing mode emphasizes the caret's current section.
 - Switching a theme no longer caches the previous theme's editor colors under the new choice.
 
 ### Foundation

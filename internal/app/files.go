@@ -206,6 +206,7 @@ func (a *App) removeDocument(id string) {
 		delete(a.analyses, id)
 		delete(a.conflicts, id)
 		delete(a.checking, id)
+		delete(a.savedEvents, id)
 		if len(a.files) == 0 {
 			a.newDocument()
 		} else if a.selected == id {
@@ -324,6 +325,7 @@ func (a *App) saveFile(file *mdeditor.File, saveAs bool, onSaved func()) {
 	needsNewPath := saveAs || path == "" || !hasDisk
 	a.fileBusy = true
 	a.saving = true
+	a.savingFileID = fileID
 	a.notice = "Saving…"
 	window := a.window
 	go func() {
@@ -407,6 +409,7 @@ func (a *App) saveFile(file *mdeditor.File, saveAs bool, onSaved func()) {
 			a.disk[fileID] = saved
 			delete(a.conflicts, fileID)
 			if file.MarkSavedVersion(captured.Text.Version()) {
+				a.acknowledgeSave(file)
 				a.notice = ""
 				if onSaved != nil {
 					onSaved()

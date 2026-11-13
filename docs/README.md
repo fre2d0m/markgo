@@ -7,6 +7,7 @@
 - [Development setup](development/setup.md): requirements, commands, repository layout, and definition of done.
 - [Design system](design/design-system.md): visual principles, theme tokens, and UI verification.
 - [Testing strategy](testing/strategy.md): headless behavior tests, native verification, and quality gates.
+- [Beta delivery plan](development/beta-delivery.md): engineering priorities, editor-model decisions and release acceptance gates; planned work is distinguished from the available foundation.
 
 ## Project policies
 

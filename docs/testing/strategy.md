@@ -8,6 +8,8 @@ Test observable behavior and persistent state rather than incidental pixel coord
 
 Custom-title-bar tests use fake window commands to verify exactly-once dispatch, maximize/restore labels, and preservation of writing state. They exercise control reachability at 1×, 1.5×, and 2× display scale in a minimum-sized window, including Focus mode. Panel tests interrupt enter/exit transitions with and without reduced motion, then check selection and continued typing. File-list tests verify consecutive keyboard navigation and Enter-to-edit behavior.
 
+Interaction tests advance the actual animation clock, reverse a sidebar mid-flight, reject input in closing navigation, and verify that typing and undo continue afterward. They exercise row/context close protection, copying a specific document path, reader-anchor navigation, and save acknowledgment expiry/precedence over stale saves. Recorded headless frames can demonstrate motion; they remain distinct from native desktop acceptance.
+
 ## Editor and parser tests
 
 Preview replacements must preserve the source buffer and reveal the active element's marks. Cover CJK byte offsets, escapes, code fences, tasks, links, nested delimiters, YAML front matter, heading offsets, and statistics. List continuation must not alter fenced code or comments. Golden rendering tests complement rather than replace editing behavior tests.

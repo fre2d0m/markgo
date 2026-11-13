@@ -49,6 +49,10 @@ Use small, consistent radii: 6–8 DIP for controls and 12–14 DIP for floating
 - Formatting preserves the selection until applying one undoable edit, then returns focus to writing.
 - Appearance and Formatting are mutually exclusive. Escape closes the open panel without collapsing the writing selection; outside clicks dismiss it.
 - File-list arrow, Home, and End navigation keeps focus in the list across document changes. Enter starts editing the selected document.
+- Sidebar width moves over 180 ms with ease-out and can reverse from its current width. Its controls stop accepting input when closing. Keep the editor's identity stable and its source, selection, scroll and undo intact; never fade or scale the document.
+- Files/Outline uses a 160 ms sliding indicator and a 120 ms content entrance. Outline rows align to the left and editing emphasizes the caret's current section. Read mode addresses reader anchors.
+- File-row close targets occupy a reserved 40 DIP area and fade in over 100 ms on the current/hovered row (always reachable without hover on touch). Context actions address that file; menus use MyGo's self-drawn presentation throughout.
+- A current-version save receives a quiet check and a two-second acknowledgment. New edits and failures override this feedback immediately; it never implies autosave or recovery.
 - Follow system appearance has one full-row checkbox target.
 - Cmd/Ctrl+, opens Appearance, Cmd/Ctrl+Backslash toggles the sidebar, and Cmd/Ctrl+Shift+F enters or exits Focus.
 - New document always opens in editing mode, including from a reading view.
@@ -59,6 +63,10 @@ Use small, consistent radii: 6–8 DIP for controls and 12–14 DIP for floating
 
 These are native headless renders, not desktop acceptance screenshots.
 
+The interaction recording uses the actual application view and animation clock. It covers tab changes, interrupted sidebar motion, appearance and focus mode. It does not establish native GPU frame timing or IME behavior.
+
+![Writing flow and micro-interactions](images/interaction.gif)
+
 ![Paper reading view](images/paper-reading.png)
 
 ![Graphite editing view](images/graphite-editing.png)
@@ -68,6 +76,10 @@ These are native headless renders, not desktop acceptance screenshots.
 ![Warm paper formatting at 150 percent display scale](images/warm-formatting.png)
 
 ![Find and replace at the minimum window width](images/find.png)
+
+![Current section in the outline](images/outline.png)
+
+![Document context actions](images/document-menu.png)
 
 ## Verification
 
