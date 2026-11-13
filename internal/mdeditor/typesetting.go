@@ -1,12 +1,9 @@
 package mdeditor
 
 import (
-	"sort"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/egoist/mygo/ui/editor"
-	"github.com/egoist/mygo/ui/markdown/parser"
 	"github.com/egoist/mygo/ui/richtext"
 )
 
@@ -28,67 +25,6 @@ type Typesetter struct {
 	input                               typesettingInput
 }
 
-type typesetLine struct {
-	start, content, end int // UTF-8 source offsets
-	viewStart, heading  int // projected rune offset; ATX level
-}
-
-type typesetProjection struct {
-	source, text string
-	// Each visible rune boundary maps to a source byte boundary. At a
-	// heading's start it points after the hidden prefix. A selection crossing
-	// the preceding newline therefore also consumes that prefix when joining.
-	boundaries []int
-	lines      []typesetLine
-}
-
-func projectTypesetting(source string) typesetProjection {
-	p := typesetProjection{source: source}
-	headings := make(map[int]int)
-	doc := parser.Parse(source)
-	frontEnd := frontMatterEnd(source)
-	for i := 1; i < doc.Len(); i++ {
-		b := doc.Block(i)
-		if b.Kind == parser.Heading && b.Parent == 0 && b.Start >= frontEnd {
-			headings[b.Start] = b.Level
-		}
-	}
-	var shown strings.Builder
-	start := 0
-	for _, line := range strings.Split(source, "\n") {
-		content, level := start, headings[start]
-		if level > 0 {
-			if prefix := headingPrefix.FindStringIndex(line); prefix != nil {
-				content += prefix[1]
-			} else {
-				level = 0 // Setext headings remain literal in this prototype.
-			}
-		}
-		p.lines = append(p.lines, typesetLine{start, content, start + len(line), len(p.boundaries), level})
-		for off, r := range source[content : start+len(line)] {
-			p.boundaries = append(p.boundaries, content+off)
-			shown.WriteRune(r)
-		}
-		if start+len(line) < len(source) {
-			p.boundaries = append(p.boundaries, start+len(line))
-			shown.WriteByte('\n')
-		}
-		start += len(line) + 1
-	}
-	p.boundaries = append(p.boundaries, len(source))
-	p.text = shown.String()
-	return p
-}
-
-func (p typesetProjection) sourceOffset(runeOffset int) int {
-	return p.boundaries[max(0, min(runeOffset, len(p.boundaries)-1))]
-}
-
-func (p typesetProjection) viewOffset(byteOffset int) int {
-	i := sort.SearchInts(p.boundaries, byteOffset)
-	return min(i, len(p.boundaries)-1)
-}
-
 func NewTypesetter(source *editor.State) *Typesetter {
 	t := &Typesetter{Source: source, Document: richtext.NewDocument(richtext.Text{})}
 	t.input.owner = t
@@ -96,12 +32,21 @@ func NewTypesetter(source *editor.State) *Typesetter {
 	return t
 }
 
-// FromSource rebuilds presentation after source edits, undo, or a mode change.
-// It does not edit the source or clear its undo history.
+// FromSource updates the projection after source edits, undo, or a mode change.
+// Only changed display text is replaced, so richtext retains the other
+// paragraphs' layouts. Source remains the only authority for undo.
 func (t *Typesetter) FromSource() {
-	t.projection = projectTypesetting(t.Source.Buffer.String())
+	t.projection.update(t.Source.Buffer.String())
+	t.input.clearMark()
 	sel := t.Source.Selection()
-	t.Document.SetText(richtext.NewText(t.projection.text))
+	shown := t.Document.Text().String()
+	if shown != t.projection.text {
+		start, oldEnd, newEnd := changedText(shown, t.projection.text, len(shown))
+		a, z := utf8.RuneCountInString(shown[:start]), utf8.RuneCountInString(shown[:oldEnd])
+		t.Document.Edit(func(e *richtext.Edit) {
+			e.ReplaceString(a, z, t.projection.text[start:newEnd], richtext.Attributes{})
+		})
+	}
 	t.Document.SetSelection(t.projection.viewOffset(sel.Anchor), t.projection.viewOffset(sel.Head))
 	t.sourceVersion, t.richVersion = t.Source.Buffer.Version(), t.Document.Version()
 	t.beforeAnchor, t.beforeCaret = t.Document.Selection()
@@ -132,6 +77,8 @@ func (t *Typesetter) Sync() {
 		case "paste", "pasteAndMatchStyle":
 			t.Insert(text)
 		default:
+			t.Document.SetText(richtext.NewText(t.projection.text))
+			t.FromSource()
 			t.Notice = "This formatting is available in Markdown source."
 		}
 		return
@@ -139,34 +86,30 @@ func (t *Typesetter) Sync() {
 	if t.composing || t.Document.Version() == t.richVersion {
 		return
 	}
-	old, next := []rune(t.projection.text), []rune(t.Document.Text().String())
+	old, next := t.projection.text, t.Document.Text().String()
 	a, z := t.Document.Selection()
-	if string(old) == string(next) {
+	if old == next {
 		// Unmapped rich formatting must never look saved without source syntax.
 		t.Source.Select(t.projection.sourceOffset(a), t.projection.sourceOffset(z))
+		t.Document.SetText(richtext.NewText(old))
 		t.FromSource()
 		return
 	}
-	start := 0
-	for start < min(len(old), len(next), min(t.beforeAnchor, t.beforeCaret)) && old[start] == next[start] {
-		start++
-	}
-	oldEnd, newEnd := len(old), len(next)
-	for oldEnd > start && newEnd > start && old[oldEnd-1] == next[newEnd-1] {
-		oldEnd--
-		newEnd--
-	}
+	first, oldLast, newLast := changedText(old, next, runeByte(old, min(t.beforeAnchor, t.beforeCaret)))
+	start := utf8.RuneCountInString(old[:first])
+	oldEnd, newEnd := utf8.RuneCountInString(old[:oldLast]), utf8.RuneCountInString(next[:newLast])
 	sourceStart, sourceEnd := t.projection.sourceOffset(start), t.projection.sourceOffset(oldEnd)
-	if t.beforeAnchor != t.beforeCaret && min(t.beforeAnchor, t.beforeCaret) == 0 && max(t.beforeAnchor, t.beforeCaret) == len(old) {
-		sourceStart, sourceEnd, start, oldEnd, newEnd = 0, len(t.projection.source), 0, len(old), len(next)
+	if t.beforeAnchor != t.beforeCaret && min(t.beforeAnchor, t.beforeCaret) == 0 && max(t.beforeAnchor, t.beforeCaret) == t.projection.len() {
+		sourceStart, sourceEnd, start, oldEnd, newEnd = 0, len(t.projection.source), 0, t.projection.len(), t.Document.Text().Len()
+		first, newLast = 0, len(next)
 	}
-	inserted := string(next[start:newEnd])
+	inserted := next[first:newLast]
 	mapSelection := func(pos int) int {
 		if pos < start {
 			return t.projection.sourceOffset(pos)
 		}
 		if pos <= newEnd {
-			return sourceStart + len(string(next[start:pos]))
+			return sourceStart + runeByte(inserted, pos-start)
 		}
 		return t.projection.sourceOffset(pos-newEnd+oldEnd) + len(inserted) - (sourceEnd - sourceStart)
 	}

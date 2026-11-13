@@ -28,6 +28,7 @@ Read `.agents/skills/mygo-maintenance/SKILL.md` before changing UI code. Confirm
 - Use `Window.Update` to publish background results. Never block the UI thread or start untracked work while building a view.
 - Prefer MyGo widgets and base widgets so keyboard, focus, input methods, and accessibility keep working.
 - Use `ui.NewTester` for behavior tests without opening a window.
+- Typesetting projection changes must retain untouched source and paragraph layouts; compare incremental edits against a fresh parse, including distant fence/front-matter effects and Unicode offsets. Benchmark fixed edit/undo workloads separately from native input latency.
 
 ## Commands
 

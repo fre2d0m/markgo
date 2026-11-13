@@ -53,7 +53,7 @@ However, direct `ParseMarkdown(source).Markdown()` replacement is unsuitable for
 | Reference link | Rewritten as an inline link |
 | YAML front matter | Reinterpreted as a heading |
 
-A runnable, sample-only prototype now explores a source-preserving adapter over native rich text. See the [native typesetting checkpoint](native-typesetting.md) for the implementation decision, commands, screenshots, tests and limitations. It directly edits headings/paragraphs, maps edits to the canonical source, and shares source-mode history. The production editor is unchanged. Native IME/selection acceptance and incremental projection remain required before integration. Do not introduce a WebView, replace the editor with a whole-document serializer, or maintain two competing authoritative document models.
+A runnable, sample-only prototype now explores a source-preserving adapter over native rich text. See the [native typesetting checkpoint](native-typesetting.md) for the implementation decision, commands, screenshots, tests and limitations. It directly edits headings/paragraphs, maps edits to the canonical source, and shares source-mode history. Incremental parsing, compact line maps and retained paragraph layouts reduce long-document input allocations; fixed-workload benchmarks and fresh-parse comparisons cover this checkpoint. The production editor is unchanged. Native IME/selection acceptance, desktop latency and sustained-memory checks remain required before integration. Do not introduce a WebView, replace the editor with a whole-document serializer, or maintain two competing authoritative document models.
 
 The chosen approach must pass these gates before integration:
 

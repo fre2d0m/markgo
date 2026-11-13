@@ -27,6 +27,9 @@ Edit the English or Chinese sample directly. Drag from a heading into a paragrap
 | The ordinary application is the only executable | A separate preview entry and bundle identifier allow sample-only inspection without touching the real workspace |
 | Existing workbench appearance and motion | The preview reuses Paper, Warm paper, Graphite, custom titlebar, reversible sidebar motion, quiet hover feedback and small popover transitions; no page entrance motion |
 | First prototype screenshots had tight body lines and an initial zero character count | Corrected line height and initialized statistics, then captured the rendered states again |
+| Every input rebuilt a per-rune source map, reparsed all Markdown and reset the rich-text document | Incremental parsing and line records update the affected source region; precise display replacements retain unchanged paragraph layouts |
+| Every source version invalidated all paragraph styles | Ordinary typing retains style caches; heading-level and paragraph-count changes still invalidate them |
+| Preedit attributes were discarded as a side effect of resetting the document | Commit and cancellation explicitly clear preedit underlines, including unchanged-text composition |
 
 ## Engineering decision
 
@@ -38,15 +41,17 @@ Continue the source-preserving native richtext adapter experiment. Keep it out o
 | Serialize `richtext.ParseMarkdown` | Rejected: the earlier probe lost code language, rewrote references, and converted tables/front matter. No-op loading must not rewrite a file. |
 | Project source into native richtext | Selected for this checkpoint. Reuses shaping, continuous pointer selection, wrapping and caret layout while keeping source authoritative. Requires explicit source maps and input/history adapters; these are exercised here, not assumed. |
 
-`internal/mdeditor/typesetting*.go` implements the adapter. `Document` is disposable display state, including staged preedit. The source buffer changes only when an edit is committed. `FromSource` rebuilds display without editing source or clearing source history. Header commands, native Edit-menu commands and clipboard paste use that same history. Paste reads plain text rather than importing HTML/RTF attributes. Unsupported rich-format commands show feedback rather than creating formatting that cannot be saved in Markdown.
+`internal/mdeditor/typesetting*.go` implements the adapter. `Document` is disposable display state, including staged preedit. The source buffer changes only when an edit is committed. `FromSource` patches display text without editing source or clearing source history. Header commands, native Edit-menu commands and clipboard paste use that same history. Paste reads plain text rather than importing HTML/RTF attributes. Unsupported rich-format commands show feedback rather than creating formatting that cannot be saved in Markdown.
+
+The projection retains the pinned parser's incremental document and a compact source/view record per physical line. Unchanged lines retain their rune counts. Every update reconciles top-level block kinds, since a fence or front-matter edit can change distant headings. UTF-8 replacements stop at rune boundaries. Ordinary text edits do not invalidate all paragraph styles or replace the whole rich-text document. This is not constant-time editing: source/display strings, downstream offsets, block reconciliation and some native text-service queries still involve document-wide work.
 
 Native input methods can call `TextInputClient` without `ObserveInput`. The adapter therefore owns that client rather than relying on keyboard observations to identify composition. Preedit replaces display text only. Cancellation restores the selection and source; confirmation commits once. An immediate final replacement after Unmark replaces that exact commit only if the source version and native range still match. Typing bursts similarly merge only the adapter's own latest version at the same caret; navigation, commands and IME break the burst.
 
 ## Evidence
 
-Behavior tests cover forward and reversed cross-block selections, pointer drag, deletion/joining, Enter at heading start/middle/end, select-all deletion, emoji and CJK offsets, plain-text paste from a mixed HTML/text clipboard, native menu undo/redo, shared source-mode history, direct native-client calls, composition cancellation and unmark/commit ordering. Unchanged replacement tests guard against accidentally undoing earlier writing. The long-document test uses more than 100,000 Unicode characters and verifies that typing/undo retains source and keeps the caret in the viewport.
+Behavior tests cover forward and reversed cross-block selections, pointer drag, deletion/joining, Enter at heading start/middle/end, select-all deletion, emoji and CJK offsets, plain-text paste from a mixed HTML/text clipboard, native menu undo/redo, shared source-mode history, direct native-client calls, composition cancellation and unmark/commit ordering. Unchanged replacement tests guard against accidentally undoing earlier writing. Long-document tests use more than 100,000 Unicode characters and verify typing/undo at the start, middle and end, including source preservation and caret stability. Incremental projection tests compare text, line records and source/view offsets with a fresh parse after edits and undo. A 20-second local fuzz run completed 182,604 cases without a mismatch, including fences, front matter, HTML, nested blocks and Unicode replacements.
 
-Rendered evidence comes from the actual Go view through `ui.NewTester`, not a browser or design mockup. The screenshot matrix has **39 states**: 13 scenes × three palettes, including writing, Chinese, selection, source, appearance, paragraph menu, empty, notice, sidebar hidden, simulated composition, literal syntax, long document, and 24 DIP book typography. Writing/Chinese use 1320×840; the other scenes use 960×640. Screenshots were inspected, corrected and recaptured.
+Rendered evidence comes from the actual Go view through `ui.NewTester`, not a browser or design mockup. The screenshot matrix has **42 states**: 14 scenes × three palettes, including writing, Chinese, selection, source, appearance, paragraph menu, empty, notice, sidebar hidden, simulated composition, literal syntax, long document, editing in the middle of a long document, and 24 DIP book typography. Writing/Chinese use 1320×840; the other scenes use 960×640. All states were recaptured and inspected after the incremental update. The six previously committed reference screenshots remain pixel-identical.
 
 ![Editable Chinese page, headless rendering](../design/images/typesetting/paper-chinese.png)
 
@@ -54,7 +59,19 @@ Rendered evidence comes from the actual Go view through `ui.NewTester`, not a br
 
 ![Appearance at minimum window size, headless rendering](../design/images/typesetting/warm-appearance.png)
 
-On an Apple M2 Max, Go 1.27.4, CGO disabled, one local benchmark run measured approximately **1.84 ms** to rebuild a 107,200-byte projection and **7.10 ms per headless input operation** on the 100,000+ character fixture. The input benchmark allocated about **16.1 MB per operation**. These are CPU/headless averages, not desktop input latency, p95, GPU frame time or a performance acceptance result. The allocation cost is a concrete reason to make projection updates incremental before production integration.
+![Editing the middle of a long document, headless rendering](../design/images/typesetting/paper-long-middle.png)
+
+On an Apple M2 Max, Go 1.27.4, CGO disabled, fixed-workload benchmarks compare the merged baseline `b8f6526` with the incremental implementation. Each result below is the median of three runs of 200 operations; MB means decimal megabytes allocated per operation. An edit cycle inserts `中🙂` and undoes it, restoring exactly the same fixture each time. The complete preview benchmark includes the workbench and word-count updates.
+
+| Workload | Before time / allocation | After time / allocation |
+| --- | --- | --- |
+| Editor, continuous input, 100,000+ characters | 7.43 ms / 16.15 MB | 3.37 ms / 1.31 MB |
+| Editor, start edit + undo | 10.18 ms / 33.70 MB | 1.59 ms / 5.43 MB |
+| Editor, middle edit + undo | 14.47 ms / 33.90 MB | 5.15 ms / 4.43 MB |
+| Editor, end edit + undo | 17.97 ms / 33.82 MB | 7.88 ms / 2.87 MB |
+| Complete preview, middle edit + undo, 111,317 characters | 15.95 ms / 21.93 MB | 9.73 ms / 4.93 MB |
+
+Raw [before](benchmarks/typesetting-2026-11-13-before.txt) and [after](benchmarks/typesetting-2026-11-13-after.txt) output is retained for comparison. These are CPU/headless averages, not desktop input latency, p95, GPU frame time or a native performance acceptance result. They also do not establish bounded live-heap use or long single-paragraph performance.
 
 Local `go test ./...`, module consistency, Go vet, MyGo vet for both entries, staticcheck and macOS/Windows preview packaging are checked for this checkpoint. The local `make` shim is blocked by an unaccepted Xcode license, so its component checks are run individually; CI runs the actual Make target and race detector.
 
@@ -64,6 +81,6 @@ Local `go test ./...`, module consistency, Go vet, MyGo vet for both entries, st
 
 - Only top-level ATX heading prefixes receive structured presentation. Optional closing heading markers remain literal. Setext headings, inline syntax, lists, quotes, code, front matter, images and tables remain editable Markdown text.
 - Physical source lines remain separate display paragraphs; soft-line-break paragraph fusion and blank-line spacing need a deliberate model before expanding block support.
-- This prototype uses a complete projection rebuild after edits. Incremental projection, precise paragraph anchoring across mode switches, native text-service hit testing, multi-line preedit and long-document allocation/latency profiling remain integration gates.
+- Incremental projection and retained layout now reduce ordinary typing costs. Full-string snapshots, offset updates, native text-service range queries, long single-paragraph behavior and sustained live-heap use still need profiling. Precise paragraph anchoring across mode switches, native text-service hit testing, multi-line preedit and actual desktop input latency remain integration gates.
 - Current history is in memory; this preview does not save or recover edits. The production editor's recovery implementation is separate and unchanged.
-- Next: native Windows/macOS IME and selection acceptance, then source-preserving list/quote/code editing. Images, tables and export follow the [beta delivery plan](beta-delivery.md). Do not promote this adapter to ordinary files just because the sample looks finished.
+- Next: source-preserving list continuation, indentation and exit behavior, followed by quotes and code. Native Windows/macOS IME and selection acceptance remains required before integration with ordinary documents. Images, tables and export follow the [beta delivery plan](beta-delivery.md). Do not promote this adapter to ordinary files just because the sample looks finished.

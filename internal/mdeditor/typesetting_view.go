@@ -47,7 +47,7 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 				t.Document.SetSelection(0, t.Document.Text().Len())
 			}
 		},
-		SpansVersion: int(t.sourceVersion),
+		SpansVersion: t.projection.styleVersion,
 		Spans: func(p int, _ richtext.ParagraphStyle, spans []ui.Span) []ui.Span {
 			size, weight := font.Size, 400
 			if p < len(t.projection.lines) {

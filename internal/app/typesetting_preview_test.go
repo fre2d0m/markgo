@@ -94,7 +94,7 @@ func TestTypesettingScreenshots(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, theme := range []string{"paper", "warm", "graphite"} {
-		for _, scene := range []string{"writing", "chinese", "selection", "source", "appearance", "paragraph", "empty", "notice", "focus", "composition", "syntax", "long", "large-book"} {
+		for _, scene := range []string{"writing", "chinese", "selection", "source", "appearance", "paragraph", "empty", "notice", "focus", "composition", "syntax", "long", "long-middle", "large-book"} {
 			p := NewTypesettingPreview()
 			p.shell.appearance.Theme = theme
 			w, h := 1320, 840
@@ -108,7 +108,7 @@ func TestTypesettingScreenshots(t *testing.T) {
 				p.selected = 3
 			case "syntax":
 				p.selected = 2
-			case "long":
+			case "long", "long-middle":
 				p.selected = 4
 			case "large-book":
 				p.shell.appearance.FontSize = 24
@@ -134,6 +134,12 @@ func TestTypesettingScreenshots(t *testing.T) {
 				p.current().typesetter.Document.SetSelection(12, 12)
 				tt.Frame()
 				tt.Compose("xiezuo", 6)
+			case "long-middle":
+				doc := p.current().typesetter.Document
+				at := doc.Text().Len() / 2
+				doc.SetSelection(at, at)
+				tt.Frame()
+				tt.Type("继续写下去。")
 			}
 			tt.Advance(200 * time.Millisecond)
 			out, err := os.Create(filepath.Join(dir, theme+"-"+scene+".png"))
@@ -146,5 +152,24 @@ func TestTypesettingScreenshots(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
+	}
+}
+
+func BenchmarkTypesettingPreviewEditCycle100K(b *testing.B) {
+	p := NewTypesettingPreview()
+	p.selected = 4
+	tt := ui.NewTester(p.View, 960, 640)
+	doc := p.current().typesetter.Document
+	at := doc.Text().Len() / 2
+	doc.SetSelection(at, at)
+	tt.Frame()
+	original := p.current().file.State.Buffer.String()
+	b.ReportAllocs()
+	for b.Loop() {
+		tt.Type("中🙂")
+		tt.Key(ui.Cmd, ui.KeyZ)
+	}
+	if p.current().file.State.Buffer.String() != original {
+		b.Fatal("benchmark did not restore its fixture")
 	}
 }
