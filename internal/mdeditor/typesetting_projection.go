@@ -13,6 +13,7 @@ type typesetLine struct {
 	start, content, end int // UTF-8 source offsets
 	viewStart, viewByte int // projected rune and byte offsets
 	runes, heading      int // visible length; ATX level
+	list                typesetListStyle
 }
 
 type typesetProjection struct {
@@ -20,6 +21,9 @@ type typesetProjection struct {
 	lines        []typesetLine
 	parsed       *parser.Document
 	styleVersion int
+	listLines    []typesetListLine
+	items        []typesetListItem
+	listNumber   int
 }
 
 func projectTypesetting(source string) typesetProjection {
@@ -78,7 +82,11 @@ func (p *typesetProjection) update(source string) {
 		if first+len(replaced) <= last {
 			heading = p.lines[first+len(replaced)].heading
 		}
-		replaced = append(replaced, typesetLine{start: offset, content: offset, end: offset + len(line), heading: heading})
+		list := typesetListStyle{}
+		if first+len(replaced) <= last {
+			list = p.lines[first+len(replaced)].list
+		}
+		replaced = append(replaced, typesetLine{start: offset, content: offset, end: offset + len(line), heading: heading, list: list})
 		offset += len(line) + 1
 	}
 	styleChanged := len(replaced) != last-first+1
@@ -91,6 +99,7 @@ func (p *typesetProjection) update(source string) {
 	}
 	p.parsed.Set(source)
 	frontEnd := frontMatterEnd(source)
+	p.projectLists(source, frontEnd)
 	block, viewStart, viewByte := 1, 0, 0
 	changedFirst, changedLast := first, newLast
 	for i := range p.lines {
@@ -117,14 +126,20 @@ func (p *typesetProjection) update(source string) {
 				}
 			}
 		}
-		if touched || level != line.heading {
+		list := p.listLines[i]
+		if list.style.kind != NoList {
+			content = line.start + list.prefix
+		} else if line.list.kind != NoList && level == 0 {
+			content = line.start
+		}
+		if touched || level != line.heading || list.style != line.list || content != line.content {
 			if !touched {
 				oldStartByte = min(oldStartByte, line.viewByte)
 				oldEndByte = max(oldEndByte, line.viewByte+line.end-line.content)
 				changedFirst, changedLast = min(changedFirst, i), max(changedLast, i)
 			}
-			styleChanged = styleChanged || level != line.heading
-			line.content, line.heading = content, level
+			styleChanged = styleChanged || level != line.heading || list.style != line.list
+			line.content, line.heading, line.list = content, level, list.style
 			line.runes = utf8.RuneCountInString(source[content:line.end])
 		}
 		line.viewStart, line.viewByte = viewStart, viewByte

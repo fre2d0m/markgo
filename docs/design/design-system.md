@@ -59,6 +59,8 @@ Use small, consistent radii: 6–8 DIP for controls and 12–14 DIP for floating
 - Follow system appearance has one full-row checkbox target.
 - Cmd/Ctrl+, opens Appearance, Cmd/Ctrl+Backslash toggles the sidebar, and Cmd/Ctrl+Shift+F enters or exits Focus.
 - New document always opens in editing mode, including from a reading view.
+- In the isolated typesetting preview, lists share a hanging text inset and decimal numbering at every depth. The inset grows when a long ordinal needs room; checkboxes and bullets remain near their text. Continuations align with the item content.
+- Task checkboxes use an 18 DIP drawing within a 40 DIP target, 100 ms neutral hover and 90 ms press feedback. Completed text uses muted ink. Targets never overlap adjacent items, even at 14 DIP type. Clicking preserves the writing caret and focus; Cmd/Ctrl+Enter toggles the caret's task. No task animation moves the page.
 - Dirty markers and footer save state must reflect the buffer and actual saved version. Do not imply autosave.
 - Parsing, file I/O, and preference writes stay off the native event loop. Unchanged typography reuses cached themes.
 

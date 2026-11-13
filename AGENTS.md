@@ -29,6 +29,8 @@ Read `.agents/skills/mygo-maintenance/SKILL.md` before changing UI code. Confirm
 - Prefer MyGo widgets and base widgets so keyboard, focus, input methods, and accessibility keep working.
 - Use `ui.NewTester` for behavior tests without opening a window.
 - Typesetting projection changes must retain untouched source and paragraph layouts; compare incremental edits against a fresh parse, including distant fence/front-matter effects and Unicode offsets. Benchmark fixed edit/undo workloads separately from native input latency.
+- Structured lists come from parser-confirmed items. Preserve original markers and written numbers; display semantic decimal numbering at every depth. Prefix/indentation changes, task toggles and their necessary Markdown separators belong to source history, never a rich-text serializer.
+- Task controls keep the writing focus and selection, use non-overlapping 40 DIP targets, and leave the document still. Verify pointer cancellation, keyboard toggling, source-mode undo, whole-item clipboard syntax and native text-service hit geometry after layout changes.
 
 ## Commands
 

@@ -1,8 +1,10 @@
 package mdeditor
 
 import (
+	"strings"
 	"unicode/utf8"
 
+	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 	"github.com/egoist/mygo/ui/richtext"
 )
@@ -23,6 +25,8 @@ type Typesetter struct {
 	compositionAnchor, compositionCaret int
 	pendingCommand, pendingText         string
 	input                               typesettingInput
+	appliedStyle                        int
+	services                            ui.Services
 }
 
 func NewTypesetter(source *editor.State) *Typesetter {
@@ -42,11 +46,15 @@ func (t *Typesetter) FromSource() {
 	shown := t.Document.Text().String()
 	if shown != t.projection.text {
 		start, oldEnd, newEnd := changedText(shown, t.projection.text, len(shown))
+		if strings.Contains(shown[start:oldEnd], "\n") || strings.Contains(t.projection.text[start:newEnd], "\n") {
+			t.appliedStyle = 0
+		}
 		a, z := utf8.RuneCountInString(shown[:start]), utf8.RuneCountInString(shown[:oldEnd])
 		t.Document.Edit(func(e *richtext.Edit) {
 			e.ReplaceString(a, z, t.projection.text[start:newEnd], richtext.Attributes{})
 		})
 	}
+	t.projectListStyles()
 	t.Document.SetSelection(t.projection.viewOffset(sel.Anchor), t.projection.viewOffset(sel.Head))
 	t.sourceVersion, t.richVersion = t.Source.Buffer.Version(), t.Document.Version()
 	t.beforeAnchor, t.beforeCaret = t.Document.Selection()
@@ -68,6 +76,7 @@ func (t *Typesetter) Sync() {
 		// changes are intentionally discarded, then the captured source command
 		// runs once. This also prevents HTML/RTF paste from rewriting Markdown.
 		t.Source.Select(t.projection.sourceOffset(t.beforeAnchor), t.projection.sourceOffset(t.beforeCaret))
+		t.appliedStyle = 0
 		t.FromSource()
 		switch command {
 		case "undo":
@@ -76,8 +85,19 @@ func (t *Typesetter) Sync() {
 			t.Undo(true)
 		case "paste", "pasteAndMatchStyle":
 			t.Insert(text)
+		case "copy", "cut":
+			t.copySelection(t.services, command == "cut")
+		case "bullets":
+			t.SetList(BulletedList)
+		case "numbers":
+			t.SetList(NumberedList)
+		case "tasks":
+			t.SetList(TaskList)
+		case "indent", "outdent":
+			t.IndentList(command == "outdent")
 		default:
 			t.Document.SetText(richtext.NewText(t.projection.text))
+			t.appliedStyle = 0
 			t.FromSource()
 			t.Notice = "This formatting is available in Markdown source."
 		}
@@ -92,6 +112,7 @@ func (t *Typesetter) Sync() {
 		// Unmapped rich formatting must never look saved without source syntax.
 		t.Source.Select(t.projection.sourceOffset(a), t.projection.sourceOffset(z))
 		t.Document.SetText(richtext.NewText(old))
+		t.appliedStyle = 0
 		t.FromSource()
 		return
 	}
@@ -184,7 +205,29 @@ func (t *Typesetter) Undo(redo bool) {
 }
 
 func (t *Typesetter) Heading(level int) {
+	if level < 0 || level > 6 {
+		return
+	}
 	t.ToSource()
+	sel := t.Source.Selection()
+	i := t.projection.sourceLine(sel.Start())
+	if !t.projection.canList(i) {
+		t.Notice = "Choose an ordinary paragraph to change its heading."
+		return
+	}
+	if item, ok := t.projection.itemAt(i); ok {
+		if level == 0 {
+			t.SetList(NoList)
+			return
+		}
+		line := t.projection.lines[i]
+		if i != item.line || item.end > line.end || t.projection.sourceLine(sel.End()) != i {
+			t.Notice = "Choose one item without nested content to make a heading."
+			return
+		}
+		t.applyListLines(map[int]string{i: strings.Repeat("#", level) + " " + t.projection.source[line.content:line.end]})
+		return
+	}
 	if !SetHeading(t.Source, level) {
 		t.Notice = "Choose one paragraph to change its heading."
 	}
