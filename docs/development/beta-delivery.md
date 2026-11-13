@@ -55,6 +55,8 @@ However, direct `ParseMarkdown(source).Markdown()` replacement is unsuitable for
 
 A runnable, sample-only prototype now explores a source-preserving adapter over native rich text. See the [native typesetting checkpoint](native-typesetting.md) for the implementation decision, commands, screenshots, tests and limitations. It directly edits headings/paragraphs, maps edits to the canonical source, and shares source-mode history. Incremental parsing, compact line maps and retained paragraph layouts reduce long-document input allocations; fixed-workload benchmarks and fresh-parse comparisons cover this checkpoint. The production editor is unchanged. Native IME/selection acceptance, desktop latency and sustained-memory checks remain required before integration. Do not introduce a WebView, replace the editor with a whole-document serializer, or maintain two competing authoritative document models.
 
+The list checkpoint adds source-backed bullets, decimal numbering, tasks, subtree indentation, empty-item exit, task controls and shared clipboard/undo behavior in that isolated preview. Quotes and code are the next structured blocks; native-platform acceptance remains a separate gate. See the checkpoint's 69-state rendering matrix and list behavior coverage for the current evidence.
+
 The chosen approach must pass these gates before integration:
 
 1. Untouched source ranges, unsupported syntax, reference definitions, code languages and line endings remain intact.

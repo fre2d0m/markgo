@@ -15,8 +15,10 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 	font.Weight = 400
 	font.Antialiased = true
 	t.input.font = font
+	t.input.gutter = t.listGutterWidth(font)
 	t.input.width = t.input.handle.Bounds(c).W
 	services := c.Services()
+	t.services = services
 	th := c.Theme()
 	options := richtext.EditorOptions{
 		Label: "Typeset document", Placeholder: "A thought, a sentence, a beginning…",
@@ -33,14 +35,26 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 			m.Separator()
 			a, z := t.Document.Selection()
 			if m.Item("Copy").Disabled(a == z).Chosen() {
-				services.WriteClipboard(t.Document.Text().Slice(min(a, z), max(a, z)).String())
+				t.copySelection(services, false)
 			}
 			if m.Item("Cut").Disabled(a == z).Chosen() {
-				services.WriteClipboard(t.Document.Text().Slice(min(a, z), max(a, z)).String())
-				t.DeleteSelection()
+				t.copySelection(services, true)
 			}
 			if m.Item("Paste text").Chosen() {
 				t.Insert(services.ReadClipboard())
+			}
+			m.Separator()
+			if m.Item("Bulleted list").Chosen() {
+				t.SetList(BulletedList)
+			}
+			if m.Item("Numbered list").Chosen() {
+				t.SetList(NumberedList)
+			}
+			if m.Item("Task list").Chosen() {
+				t.SetList(TaskList)
+			}
+			if m.Item("Toggle task").Chosen() {
+				t.ToggleTask(-1)
 			}
 			m.Separator()
 			if m.Item("Select all").Chosen() {
@@ -57,22 +71,35 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 					weight = 600
 				}
 			}
+			color := th.Text
+			if p < len(t.projection.lines) && t.projection.lines[p].list.checked {
+				color = th.TextMuted
+			}
 			for i := range spans {
-				spans[i] = ui.Span{Text: spans[i].Text, Font: font.Family, Size: size, Weight: weight, Color: th.Text, Underline: t.composing && spans[i].Underline}
+				spans[i] = ui.Span{Text: spans[i].Text, Font: font.Family, Size: size, Weight: weight, Color: color, Underline: t.composing && spans[i].Underline}
 			}
 			return spans
 		},
 		Space: func(p int) float32 {
-			if p == 0 || p >= len(t.projection.lines) {
+			if p >= len(t.projection.lines) {
 				return 0
 			}
-			if t.projection.lines[p].heading > 0 {
+			if t.projection.lines[p].list.kind != NoList && t.projection.lines[p].list.kind != listContinuation {
+				return max(0, 40-font.Size*font.LineHeight)
+			}
+			if p > 0 && t.projection.lines[p].heading > 0 {
 				return font.Size * 0.65
 			}
 			return 0
 		},
 	}
-	return richtext.EditorBase(c, t.Document, options).Bind(&t.input.handle).HandleTextInput(&t.input).ObserveInput(func(ev ui.InputEvent) { t.observe(ev, services) })
+	if t.Source.Buffer.Len() > 0 {
+		options.Placeholder = ""
+	}
+	options.Theme.Indent = t.input.gutter / font.Size
+	view := richtext.EditorBase(c, t.Document, options).Bind(&t.input.handle).HandleTextInput(&t.input).ObserveInput(func(ev ui.InputEvent) { t.observe(ev, services) }).Clip()
+	t.listMarkers(c, view, font)
+	return view
 }
 
 func (t *Typesetter) observe(ev ui.InputEvent, services ui.Services) {
@@ -85,7 +112,7 @@ func (t *Typesetter) observe(ev ui.InputEvent, services ui.Services) {
 		t.CancelComposition()
 	case ui.InputCommand:
 		switch ev.Text {
-		case "copy", "cut", "delete", "selectAll":
+		case "delete", "selectAll":
 			if t.composing {
 				t.CancelComposition()
 			}
@@ -118,6 +145,11 @@ func (t *Typesetter) key(key ui.Key, mods ui.Modifiers, services ui.Services) bo
 		case ui.KeyV:
 			t.Insert(services.ReadClipboard())
 			return true
+		case ui.KeyC, ui.KeyX:
+			if mods == ui.Cmd {
+				t.copySelection(services, key == ui.KeyX)
+				return true
+			}
 		case ui.Key1:
 			t.Heading(1)
 			return true
@@ -132,11 +164,37 @@ func (t *Typesetter) key(key ui.Key, mods ui.Modifiers, services ui.Services) bo
 			return true
 		}
 	}
+	if !t.composing {
+		if mods == ui.Cmd|ui.Shift {
+			switch key {
+			case ui.Key7:
+				t.SetList(NumberedList)
+				return true
+			case ui.Key8:
+				t.SetList(BulletedList)
+				return true
+			case ui.Key9, ui.KeyL:
+				t.SetList(TaskList)
+				return true
+			}
+		}
+		if key == ui.KeyEnter && mods == ui.Cmd {
+			return t.ToggleTask(-1)
+		}
+		if (key == ui.KeyTab && (mods == 0 || mods == ui.Shift)) || (mods == ui.Cmd && (key == ui.KeyBracketLeft || key == ui.KeyBracketRight)) {
+			if t.IndentList(mods == ui.Shift || key == ui.KeyBracketLeft) {
+				return true
+			}
+		}
+		if key == ui.KeyEnter && mods == 0 && t.listEnter() {
+			return true
+		}
+	}
 	// Keep unsupported rich formatting from creating invisible, unsaved state.
 	if mods&ui.Cmd != 0 {
 		switch key {
 		case ui.KeyB, ui.KeyI, ui.KeyU, ui.KeyE, ui.KeyK, ui.KeyL, ui.KeyR, ui.Key7, ui.Key8, ui.KeyBracketLeft, ui.KeyBracketRight, ui.KeyBackslash:
-			t.Notice = "Use Markdown source for inline and list formatting."
+			t.Notice = "Use Markdown source for this formatting."
 			return true
 		case ui.KeyX:
 			if mods&ui.Shift != 0 {
@@ -155,6 +213,16 @@ func (t *Typesetter) key(key ui.Key, mods ui.Modifiers, services ui.Services) bo
 	a, z := t.Document.Selection()
 	if a != z {
 		return false
+	}
+	index := t.projection.sourceLine(t.projection.sourceOffset(z))
+	line := t.projection.lines[index]
+	if key == ui.KeyBackspace && line.list.kind != NoList && z == line.viewStart {
+		if line.list.kind == listContinuation && z > 0 {
+			t.Document.SetSelection(z-1, z)
+			t.DeleteSelection()
+			return true
+		}
+		return t.IndentList(true)
 	}
 	for _, line := range t.projection.lines {
 		if line.viewStart != z || line.heading == 0 {

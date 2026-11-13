@@ -14,6 +14,8 @@ The standalone application is **MarkGo Writing Preview**, under `build/typesetti
 
 Edit the English or Chinese sample directly. Drag from a heading into a paragraph, replace the selection, undo, switch to Source, type, switch back, and undo again. The Blank page and Long read samples exercise the same editor. `Cmd/Ctrl+Shift+M` switches views; `Cmd/Ctrl+0/1/2/3` applies a paragraph or heading. Appearance and sample-sidebar controls retain the writing selection. Switching views or pages cancels unfinished composition and restores the original selection with an explanatory notice.
 
+The **A little structure** sample adds bullets, decimal steps and tasks. Return continues an item; Return in an empty item steps out one level. Tab/Shift+Tab moves an item and its descendants together. Backspace at an item start steps out too. The Paragraph style menu includes all three list kinds; `Cmd/Ctrl+Shift+8`, `+7`, and `+9` apply bullets, numbers and tasks. Click a checkbox or press `Cmd/Ctrl+Enter` at its item to toggle it. Every action shares Source mode's undo history.
+
 ## Changes in this checkpoint
 
 | Before | After |
@@ -30,6 +32,14 @@ Edit the English or Chinese sample directly. Drag from a heading into a paragrap
 | Every input rebuilt a per-rune source map, reparsed all Markdown and reset the rich-text document | Incremental parsing and line records update the affected source region; precise display replacements retain unchanged paragraph layouts |
 | Every source version invalidated all paragraph styles | Ordinary typing retains style caches; heading-level and paragraph-count changes still invalidate them |
 | Preedit attributes were discarded as a side effect of resetting the document | Commit and cancellation explicitly clear preedit underlines, including unchanged-text composition |
+| Lists were literal Markdown in the typesetting experiment | Parser-confirmed bullets, numbered items, tasks and nested text have hanging indents and native editable content |
+| Native rich-text numbering starts at 1 and changes notation at deeper levels | Source-derived decimal ordinals retain arbitrary starts and count literal complex siblings without rewriting written numbers |
+| List continuation and nesting were unavailable in Typeset | Return, empty-item exit, Tab/Shift+Tab, start-of-item Backspace and subtree indentation update canonical source in one undo step |
+| Task markers were text | Original 18 DIP checkboxes have non-overlapping 40 DIP targets, a 100 ms neutral hover and 90 ms press; clicking preserves the writing caret and focus |
+| Paragraph controls exposed headings only | Three list actions and original vector icons are available in the popup and context menu, with keyboard commands and source-mode history |
+| Copying display text dropped hidden Markdown | Complete paragraph/item selections copy original syntax; partial sentences copy plain text; keyboard, native menu and context-menu paths agree |
+| Text-service hit testing had no list inset | UTF-16 hit testing shares the displayed hanging indent, including room for long decimal markers |
+| No sample exercised lists and their editing edges | A sixth sample, list behavior tests, expanded differential fuzzing and 27 additional rendered states cover these interactions |
 
 ## Engineering decision
 
@@ -45,13 +55,17 @@ Continue the source-preserving native richtext adapter experiment. Keep it out o
 
 The projection retains the pinned parser's incremental document and a compact source/view record per physical line. Unchanged lines retain their rune counts. Every update reconciles top-level block kinds, since a fence or front-matter edit can change distant headings. UTF-8 replacements stop at rune boundaries. Ordinary text edits do not invalidate all paragraph styles or replace the whole rich-text document. This is not constant-time editing: source/display strings, downstream offsets, block reconciliation and some native text-service queries still involve document-wide work.
 
+List metadata is derived from the same parser. Paragraph indentation supplies the editable text layout; custom native markers supply Markdown numbering and checkboxes without importing rich-text list serialization. Necessary blank separators prevent an empty nested dash from becoming a Setext underline, and allow a non-1 ordered child to begin a new list. Checkbox input explicitly leaves the parent text-selection handler out of its press while retaining the base button's cancellation behavior. Completed tasks use muted ink; the document never moves or fades when a checkbox changes.
+
 Native input methods can call `TextInputClient` without `ObserveInput`. The adapter therefore owns that client rather than relying on keyboard observations to identify composition. Preedit replaces display text only. Cancellation restores the selection and source; confirmation commits once. An immediate final replacement after Unmark replaces that exact commit only if the source version and native range still match. Typing bursts similarly merge only the adapter's own latest version at the same caret; navigation, commands and IME break the burst.
 
 ## Evidence
 
 Behavior tests cover forward and reversed cross-block selections, pointer drag, deletion/joining, Enter at heading start/middle/end, select-all deletion, emoji and CJK offsets, plain-text paste from a mixed HTML/text clipboard, native menu undo/redo, shared source-mode history, direct native-client calls, composition cancellation and unmark/commit ordering. Unchanged replacement tests guard against accidentally undoing earlier writing. Long-document tests use more than 100,000 Unicode characters and verify typing/undo at the start, middle and end, including source preservation and caret stability. Incremental projection tests compare text, line records and source/view offsets with a fresh parse after edits and undo. A 20-second local fuzz run completed 182,604 cases without a mismatch, including fences, front matter, HTML, nested blocks and Unicode replacements.
 
-Rendered evidence comes from the actual Go view through `ui.NewTester`, not a browser or design mockup. The screenshot matrix has **42 states**: 14 scenes × three palettes, including writing, Chinese, selection, source, appearance, paragraph menu, empty, notice, sidebar hidden, simulated composition, literal syntax, long document, editing in the middle of a long document, and 24 DIP book typography. Writing/Chinese use 1320×840; the other scenes use 960×640. All states were recaptured and inspected after the incremental update. The six previously committed reference screenshots remain pixel-identical.
+List tests additionally cover typed markers, split/continued/empty items, reversed multi-item selections, whole subtrees, continuation-line joining, non-1 starts, literal complex siblings, nested numbering, task click cancellation, retained typing focus, native menu commands, clipboard syntax, task composition, 14/18/24 DIP hit geometry, nine-digit markers, LF/CRLF save captures and long-list caret stability. Fresh-parse comparisons now include list ownership, indentation, checked state and ordinals. A 15-second list-focused fuzz run completed 60,938 cases without a mismatch.
+
+Rendered evidence comes from the actual Go view through `ui.NewTester`, not a browser or design mockup. The screenshot matrix has **69 states**: 23 scenes × three palettes. It retains the 14 earlier scenes and adds list overview, narrow list, task toggling/hover, list selection, empty task, list source, long markers with 24 DIP book typography, list menu and unsupported-block feedback. Writing, Chinese and list overview use 1320×840; other scenes use 960×640. All states are recaptured and inspected after visible changes.
 
 ![Editable Chinese page, headless rendering](../design/images/typesetting/paper-chinese.png)
 
@@ -60,6 +74,18 @@ Rendered evidence comes from the actual Go view through `ui.NewTester`, not a br
 ![Appearance at minimum window size, headless rendering](../design/images/typesetting/warm-appearance.png)
 
 ![Editing the middle of a long document, headless rendering](../design/images/typesetting/paper-long-middle.png)
+
+The same in-memory list fixture rendered by merged main `b1d63c2` and this checkpoint:
+
+| Before | After |
+| --- | --- |
+| ![Literal list, baseline headless rendering](../design/images/typesetting/paper-list-before.png) | ![Editable list, headless rendering](../design/images/typesetting/paper-list.png) |
+
+![Task state and hover, headless rendering](../design/images/typesetting/warm-list-tasks.png)
+
+![List formatting in Graphite, headless rendering](../design/images/typesetting/graphite-list-menu.png)
+
+![Long decimal marker and wrapped tasks, headless rendering](../design/images/typesetting/paper-list-large.png)
 
 On an Apple M2 Max, Go 1.27.4, CGO disabled, fixed-workload benchmarks compare the merged baseline `b8f6526` with the incremental implementation. Each result below is the median of three runs of 200 operations; MB means decimal megabytes allocated per operation. An edit cycle inserts `中🙂` and undoes it, restoring exactly the same fixture each time. The complete preview benchmark includes the workbench and word-count updates.
 
@@ -73,14 +99,16 @@ On an Apple M2 Max, Go 1.27.4, CGO disabled, fixed-workload benchmarks compare t
 
 Raw [before](benchmarks/typesetting-2026-11-13-before.txt) and [after](benchmarks/typesetting-2026-11-13-after.txt) output is retained for comparison. These are CPU/headless averages, not desktop input latency, p95, GPU frame time or a native performance acceptance result. They also do not establish bounded live-heap use or long single-paragraph performance.
 
+The list checkpoint repeats the same fixed workloads against merged main `b1d63c2` on the same machine/toolchain, without concurrent build jobs. Medians of three × 200 operations remain close: ordinary continuous input is 3.29 → 3.25 ms with 1.31 MB allocated; complete-preview edit/undo is 9.29 → 9.30 ms with 4.93 MB allocated. A separate 3,500-task, 100,000+ character fixture takes 19.87 ms and 6.71 MB per edit/undo cycle. This measures a different, list-heavy workload and is not an improvement claim. Raw [list baseline](benchmarks/lists-2026-11-13-before.txt) and [list checkpoint](benchmarks/lists-2026-11-13-after.txt) outputs are retained.
+
 Local `go test ./...`, module consistency, Go vet, MyGo vet for both entries, staticcheck and macOS/Windows preview packaging are checked for this checkpoint. The local `make` shim is blocked by an unaccepted Xcode license, so its component checks are run individually; CI runs the actual Make target and race detector.
 
 **Native acceptance is still pending.** The computer-use tool did not grant access to the standalone preview application. No real desktop screenshot, OS candidate-window check, Windows drag/Snap/DPI check or OS clipboard acceptance is claimed. Calling the native client directly in tests verifies the adapter contract, not the behavior of an installed input method.
 
 ## Limits and next gates
 
-- Only top-level ATX heading prefixes receive structured presentation. Optional closing heading markers remain literal. Setext headings, inline syntax, lists, quotes, code, front matter, images and tables remain editable Markdown text.
+- Structured presentation covers top-level ATX headings and ordinary lists/tasks with up to eight levels. Optional closing heading marks, inline syntax, quoted lists, compact same-line nesting, block-first complex items, code, front matter, images and tables remain literal Markdown. Unsupported formatting actions explain the boundary instead of rewriting those blocks.
 - Physical source lines remain separate display paragraphs; soft-line-break paragraph fusion and blank-line spacing need a deliberate model before expanding block support.
 - Incremental projection and retained layout now reduce ordinary typing costs. Full-string snapshots, offset updates, native text-service range queries, long single-paragraph behavior and sustained live-heap use still need profiling. Precise paragraph anchoring across mode switches, native text-service hit testing, multi-line preedit and actual desktop input latency remain integration gates.
 - Current history is in memory; this preview does not save or recover edits. The production editor's recovery implementation is separate and unchanged.
-- Next: source-preserving list continuation, indentation and exit behavior, followed by quotes and code. Native Windows/macOS IME and selection acceptance remains required before integration with ordinary documents. Images, tables and export follow the [beta delivery plan](beta-delivery.md). Do not promote this adapter to ordinary files just because the sample looks finished.
+- Next: source-preserving quotes and code blocks. Native Windows/macOS IME and selection acceptance remains required before integration with ordinary documents. Images, tables and export follow the [beta delivery plan](beta-delivery.md). Do not promote this adapter to ordinary files just because the sample looks finished.

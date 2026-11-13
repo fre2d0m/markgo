@@ -48,7 +48,7 @@ func TestTypesettingLongDocumentRetainsEditPosition(t *testing.T) {
 func checkProjection(t testing.TB, p *typesetProjection, source string) {
 	t.Helper()
 	want := projectTypesetting(source)
-	if p.source != source || p.text != want.text || !slices.Equal(p.lines, want.lines) {
+	if p.source != source || p.text != want.text || !slices.Equal(p.lines, want.lines) || !slices.Equal(p.listLines, want.listLines) || !slices.Equal(p.items, want.items) || p.listNumber != want.listNumber {
 		t.Fatalf("incremental projection differs from full parse for %q\n got %q\nwant %q", source, p.text, want.text)
 	}
 	for i := 0; i <= want.len(); i++ {
@@ -74,6 +74,9 @@ func TestTypesettingIncrementalProjectionContextChanges(t *testing.T) {
 		"# First\n\n<div>\n# Literal\n</div>\n\n# Last",
 		"# First\n\n- list\n  # nested\n\n# Last\n",
 		"Setext\n======\n\n## Title ###\n\n[ref]: <https://example.test>\n",
+		"3. one\n1. two\n\n   7) nested\n   1) next\n\n- [X] 中文🙂\n- [ ] \n",
+		"- parent\n  - child\n\n  ```md\n  - literal\n  ```\n\n> - quote",
+		"- parent\n\t- child\n\t  continued\n\n999999999. last",
 	}
 	for _, source := range fixtures {
 		for _, insert := range []string{"\n", "# ", "```\n", "---\n", "<!--\n", "中文🙂", "\t", "\n\n"} {
@@ -99,6 +102,7 @@ func FuzzTypesettingIncrementalProjection(f *testing.F) {
 		"# 标题\n\n文字🙂\n\n## Tail",
 		"---\n# metadata\n---\n\n```go\n# literal\n```\n\n# Tail",
 		"- item\n  ## nested\n\n> # quote\n\nSetext\n====\n",
+		"3. one\n1. two\n   - [X] child🙂\n   - [ ] \n\n999999999) last",
 	} {
 		f.Add(seed, []byte{0, 3, 7, 12, 9, 30, 255, 1, 11})
 	}
@@ -107,7 +111,7 @@ func FuzzTypesettingIncrementalProjection(f *testing.F) {
 			t.Skip()
 		}
 		p := projectTypesetting(source)
-		snippets := []string{"", "\n", "# ", "```\n", "---\n", "🙂", "中", "文", "\t", "<!--", "-->", "[ref]: /note", "- ", "> "}
+		snippets := []string{"", "\n", "# ", "```\n", "---\n", "🙂", "中", "文", "\t", "<!--", "-->", "[ref]: /note", "- ", "> ", "[X] ", "[ ] ", "3. ", "1) ", "  "}
 		for i, action := range edits {
 			runes := []rune(source)
 			at := int(action) % (len(runes) + 1)

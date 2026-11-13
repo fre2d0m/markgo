@@ -1,0 +1,27 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/xddcode/markgo/internal/mdeditor
+cpu: Apple M2 Max
+BenchmarkTypesettingEditCycle100K/start-12  	     200	   1515526 ns/op	 5434769 B/op	     529 allocs/op
+BenchmarkTypesettingEditCycle100K/start-12  	     200	   1567200 ns/op	 5434886 B/op	     528 allocs/op
+BenchmarkTypesettingEditCycle100K/start-12  	     200	   1529770 ns/op	 5432317 B/op	     528 allocs/op
+BenchmarkTypesettingEditCycle100K/middle-12 	     200	   4826905 ns/op	 4434258 B/op	     664 allocs/op
+BenchmarkTypesettingEditCycle100K/middle-12 	     200	   4818396 ns/op	 4434253 B/op	     664 allocs/op
+BenchmarkTypesettingEditCycle100K/middle-12 	     200	   4872489 ns/op	 4434244 B/op	     664 allocs/op
+BenchmarkTypesettingEditCycle100K/end-12    	     200	   7760414 ns/op	 2872684 B/op	     379 allocs/op
+BenchmarkTypesettingEditCycle100K/end-12    	     200	   7708489 ns/op	 2872663 B/op	     379 allocs/op
+BenchmarkTypesettingEditCycle100K/end-12    	     200	   7621445 ns/op	 2872655 B/op	     379 allocs/op
+BenchmarkTypesettingHeadlessInput100K-12    	     200	   3285149 ns/op	 1306118 B/op	     249 allocs/op
+BenchmarkTypesettingHeadlessInput100K-12    	     200	   3318022 ns/op	 1306081 B/op	     249 allocs/op
+BenchmarkTypesettingHeadlessInput100K-12    	     200	   3287479 ns/op	 1306085 B/op	     249 allocs/op
+PASS
+ok  	github.com/xddcode/markgo/internal/mdeditor	11.160s
+goos: darwin
+goarch: arm64
+pkg: github.com/xddcode/markgo/internal/app
+cpu: Apple M2 Max
+BenchmarkTypesettingPreviewEditCycle100K-12    	     200	   9256458 ns/op	 4929492 B/op	     660 allocs/op
+BenchmarkTypesettingPreviewEditCycle100K-12    	     200	   9292976 ns/op	 4929299 B/op	     658 allocs/op
+BenchmarkTypesettingPreviewEditCycle100K-12    	     200	   9607150 ns/op	 4929303 B/op	     658 allocs/op
+PASS
+ok  	github.com/xddcode/markgo/internal/app	6.134s

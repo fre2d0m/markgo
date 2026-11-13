@@ -40,6 +40,7 @@ func NewTypesettingPreview() *TypesettingPreview {
 		{"Markdown notes", "Headings, code & references", typesettingMarkdown},
 		{"Blank page", "Room for your own words", ""},
 		{"Long read", "A longer writing session", "# Room to think\n\n" + strings.Repeat("## An unhurried thought\n\nThere is no need to hurry the page. One observation leads to another, until the shape of an idea begins to emerge. 写作，是让模糊的想法慢慢变得清晰。\n\n", 700)},
+		{"A little structure", "Ideas, steps & small intentions", typesettingLists},
 	} {
 		f := mdeditor.NewFile(sample.name+".md", sample.source)
 		p.pages = append(p.pages, &previewPage{file: f, typesetter: mdeditor.NewTypesetter(f.State), description: sample.description})
@@ -203,10 +204,38 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 					})
 					if b.Clicked() {
 						if p.sourceMode {
-							mdeditor.SetHeading(page.file.State, level)
-						} else {
-							page.typesetter.Heading(level)
+							page.typesetter.FromSource()
 						}
+						page.typesetter.Heading(level)
+						p.formatOpen = false
+						page.file.Focus.Focus(c)
+					}
+				}
+				ui.Box(c).Height(1).FillWidth().Margin(4, 6).Background(t.Border)
+				for _, action := range []struct {
+					label, icon, hint string
+					kind              mdeditor.ListKind
+				}{
+					{"Bulleted list", "list", "⇧8", mdeditor.BulletedList},
+					{"Numbered list", "numbered-list", "⇧7", mdeditor.NumberedList},
+					{"Task list", "task-list", "⇧9", mdeditor.TaskList},
+				} {
+					b := ui.ButtonBase(c.Key(action.label)).FillWidth().Height(44).Padding(0, 12).Radius(6).KeepFocus().Label(action.label).Tooltip("Cmd/Ctrl+" + action.hint)
+					if b.Hovered() {
+						b.Background(t.SurfaceHover)
+					}
+					b.Children(func() {
+						ui.Row(c).Fill().Gap(10).AlignItems(ui.Center).Children(func() {
+							ui.Icon(c, icons[action.icon]).Size(16, 16).TextColor(t.TextMuted)
+							ui.Text(c, action.label).FontSize(13).Grow(1)
+							ui.Text(c, action.hint).FontSize(11).TextColor(t.TextMuted)
+						})
+					})
+					if b.Clicked() {
+						if p.sourceMode {
+							page.typesetter.FromSource()
+						}
+						page.typesetter.SetList(action.kind)
 						p.formatOpen = false
 						page.file.Focus.Focus(c)
 					}
@@ -229,6 +258,29 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 		a.captionButtons(c)
 	})
 }
+
+const typesettingLists = `# A little structure
+
+Some thoughts need a little room. Others need a list.
+
+## Gather a few ideas
+
+- Start with something you noticed today.
+- Let the next thought follow naturally.
+  - 一点观察，一点好奇。
+  - Leave room for the unexpected.
+
+## One step at a time
+
+3. Find the sentence you want to keep.
+4. Give it a little more attention.
+
+## Small intentions
+
+- [ ] 写下一个还没想清楚的念头。
+- [x] Make a little space for writing.
+- [ ] Come back when you have something to add.
+`
 
 func (p *TypesettingPreview) rail(c *ui.Context) {
 	t := c.Theme()

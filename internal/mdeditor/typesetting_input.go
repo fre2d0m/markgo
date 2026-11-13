@@ -18,6 +18,7 @@ type typesettingInput struct {
 	font       ui.Font
 	handle     ui.Handle
 	width      float32
+	gutter     float32
 	marked     bool
 	start, end int // rune offsets in the staged display
 	ended      *endedComposition
@@ -223,8 +224,12 @@ func (n *typesettingInput) IndexForPoint(point ui.Point) (int, bool) {
 		}
 		// Hit testing is used by native text services. The editor's ordinary
 		// pointer events still use richtext's retained layout directly.
-		layout := ui.ShapeRichText([]ui.Span{{Text: s, Font: n.font.Family, Size: size, Weight: weight}}, n.font, n.width)
-		pos := layout.PositionAt(ui.Point{X: point.X, Y: point.Y - box.Top})
+		indent := float32(0)
+		if box.Index < len(t.projection.lines) && t.projection.lines[box.Index].list.kind != NoList {
+			indent = float32(t.projection.lines[box.Index].list.depth+1) * n.gutter
+		}
+		layout := ui.ShapeRichText([]ui.Span{{Text: s, Font: n.font.Family, Size: size, Weight: weight}}, n.font, max(1, n.width-indent))
+		pos := layout.PositionAt(ui.Point{X: point.X - indent, Y: point.Y - box.Top})
 		return nativeOffset(t.Document.Text().String(), start) + pos.Index, true
 	}
 	return 0, false
