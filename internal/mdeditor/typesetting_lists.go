@@ -173,16 +173,21 @@ func (p *typesetProjection) projectLists(source string, frontEnd int) {
 	}
 }
 
-func (t *Typesetter) projectListStyles() {
+func (t *Typesetter) projectParagraphStyles() {
 	if t.appliedStyle == t.projection.styleVersion {
 		return
 	}
 	t.Document.Edit(func(e *richtext.Edit) {
-		for _, line := range t.projection.lines {
+		for _, i := range t.projection.visible {
+			line := t.projection.lines[i]
 			style := richtext.ParagraphStyle{}
 			if line.list.kind != NoList {
 				style.Indent = line.list.depth + 1
 			}
+			if line.block.quote > 0 {
+				style.Indent = line.block.quote
+			}
+			style.CodeBlock = line.block.code > 0
 			if e.Text().ParagraphStyleAt(line.viewStart) != style {
 				e.FormatParagraphs(line.viewStart, line.viewStart, func(s *richtext.ParagraphStyle) { *s = style })
 			}

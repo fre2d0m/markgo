@@ -14,12 +14,13 @@ import (
 // file-open/save hooks, recovery store, single-instance handoff or preferences
 // store. Closing it discards only its in-memory samples.
 type TypesettingPreview struct {
-	shell      *App
-	pages      []*previewPage
-	selected   int
-	sourceMode bool
-	sidebar    bool
-	formatOpen bool
+	shell         *App
+	pages         []*previewPage
+	selected      int
+	sourceMode    bool
+	sidebar       bool
+	formatOpen    bool
+	railSelection int
 }
 
 type previewPage struct {
@@ -32,7 +33,7 @@ type previewPage struct {
 }
 
 func NewTypesettingPreview() *TypesettingPreview {
-	p := &TypesettingPreview{shell: New(), sidebar: true}
+	p := &TypesettingPreview{shell: New(), sidebar: true, railSelection: -1}
 	p.shell.appearance.Theme = "paper"
 	for _, sample := range []struct{ name, description, source string }{
 		{"A quieter morning", "An ordinary beginning", quietMorning},
@@ -41,6 +42,7 @@ func NewTypesettingPreview() *TypesettingPreview {
 		{"Blank page", "Room for your own words", ""},
 		{"Long read", "A longer writing session", "# Room to think\n\n" + strings.Repeat("## An unhurried thought\n\nThere is no need to hurry the page. One observation leads to another, until the shape of an idea begins to emerge. 写作，是让模糊的想法慢慢变得清晰。\n\n", 700)},
 		{"A little structure", "Ideas, steps & small intentions", typesettingLists},
+		{"Words worth keeping", "Quotations & small experiments", typesettingBlocks},
 	} {
 		f := mdeditor.NewFile(sample.name+".md", sample.source)
 		p.pages = append(p.pages, &previewPage{file: f, typesetter: mdeditor.NewTypesetter(f.State), description: sample.description})
@@ -240,6 +242,34 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 						page.file.Focus.Focus(c)
 					}
 				}
+				ui.Box(c).Height(1).FillWidth().Margin(4, 6).Background(t.Border)
+				for _, action := range []struct {
+					label, icon, hint string
+					apply             func()
+				}{
+					{"Quote", "quote", "⇧Q", page.typesetter.Quote},
+					{"Code block", "code", "⇧K", page.typesetter.CodeBlock},
+				} {
+					b := ui.ButtonBase(c.Key(action.label)).FillWidth().Height(44).Padding(0, 12).Radius(6).KeepFocus().Label(action.label).Tooltip("Cmd/Ctrl+" + action.hint)
+					if b.Hovered() {
+						b.Background(t.SurfaceHover)
+					}
+					b.Children(func() {
+						ui.Row(c).Fill().Gap(10).AlignItems(ui.Center).Children(func() {
+							ui.Icon(c, icons[action.icon]).Size(16, 16).TextColor(t.TextMuted)
+							ui.Text(c, action.label).FontSize(13).Grow(1)
+							ui.Text(c, action.hint).FontSize(11).TextColor(t.TextMuted)
+						})
+					})
+					b.OnClick(func() {
+						if p.sourceMode {
+							page.typesetter.FromSource()
+						}
+						action.apply()
+						p.formatOpen = false
+						page.file.Focus.Focus(c)
+					})
+				}
 			})
 		})
 		if iconButton(c, "undo", "undo", "Undo writing change").Disabled(!page.file.State.Buffer.CanUndo()).Clicked() {
@@ -282,40 +312,49 @@ Some thoughts need a little room. Others need a list.
 - [ ] Come back when you have something to add.
 `
 
+const typesettingBlocks = "# Words worth keeping\n\nA quotation leaves room for another voice.\n\n> 留下真正打动你的那一句。\n> A few honest words can change the shape of a day.\n> > Let the thought unfold.\n\n```go\nfunc begin() {\n    fmt.Println(\"慢一点，写下来。\")\n}\n```\n\nThe page is yours to continue.\n"
+
 func (p *TypesettingPreview) rail(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Width(sidebarWidth).FillHeight().Padding(22, 12, 16).Gap(10).Background(t.Surface).Children(func() {
 		ui.Text(c, "Sample pages").FontSize(11).FontWeight(500).TextColor(t.TextMuted).Margin(0, 10, 6)
-		for i, page := range p.pages {
-			b := ui.ButtonBase(c.Key(page.file.ID)).FillWidth().Height(58).Padding(10).Radius(8).Label("Open sample " + strings.TrimSuffix(page.file.Name, ".md"))
-			fill := ui.Transparent
-			if p.selected == i {
-				fill = t.SurfacePressed.Alpha(0.65)
-			} else if b.Hovered() {
-				fill = t.SurfaceHover
-			}
-			if b.Pressed() {
-				fill = t.SurfacePressed
-			}
-			b.Background(b.AnimateColor("fill", fill, ui.Animation{Duration: 110 * time.Millisecond, NonMotion: true}))
-			b.Children(func() {
-				ui.Column(c).FillWidth().Gap(5).Children(func() {
-					ui.Text(c, strings.TrimSuffix(page.file.Name, ".md")).FontSize(12).FontWeight(500).SingleLine().Ellipsis("…")
-					ui.Text(c, page.description).FontSize(10).TextColor(t.TextMuted).SingleLine().Ellipsis("…")
-				})
+		ui.Scroll(c.Key("sample-list")).FillWidth().Grow(1).MinHeight(0).Children(func() {
+			ui.Column(c).FillWidth().Gap(10).Children(func() {
+				for i, page := range p.pages {
+					b := ui.ButtonBase(c.Key(page.file.ID)).FillWidth().Height(58).Padding(10).Radius(8).Label("Open sample " + strings.TrimSuffix(page.file.Name, ".md"))
+					fill := ui.Transparent
+					if p.selected == i {
+						fill = t.SurfacePressed.Alpha(0.65)
+						if p.railSelection != i {
+							b.ScrollIntoView()
+							p.railSelection = i
+						}
+					} else if b.Hovered() {
+						fill = t.SurfaceHover
+					}
+					if b.Pressed() {
+						fill = t.SurfacePressed
+					}
+					b.Background(b.AnimateColor("fill", fill, ui.Animation{Duration: 110 * time.Millisecond, NonMotion: true}))
+					b.Children(func() {
+						ui.Column(c).FillWidth().Gap(5).Children(func() {
+							ui.Text(c, strings.TrimSuffix(page.file.Name, ".md")).FontSize(12).FontWeight(500).SingleLine().Ellipsis("…")
+							ui.Text(c, page.description).FontSize(10).TextColor(t.TextMuted).SingleLine().Ellipsis("…")
+						})
+					})
+					if b.Clicked() {
+						if !p.sourceMode {
+							p.current().typesetter.ToSource()
+						}
+						p.selected = i
+						if !p.sourceMode {
+							page.typesetter.FromSource()
+						}
+						page.file.Focus.Focus(c)
+					}
+				}
 			})
-			if b.Clicked() {
-				if !p.sourceMode {
-					p.current().typesetter.ToSource()
-				}
-				p.selected = i
-				if !p.sourceMode {
-					page.typesetter.FromSource()
-				}
-				page.file.Focus.Focus(c)
-			}
-		}
-		ui.Spacer(c)
+		})
 		ui.Column(c).Padding(10).Gap(7).Children(func() {
 			ui.Text(c, "A space to try things.").FontSize(11).TextColor(t.TextMuted)
 			ui.Text(c, "These pages stay in memory.\nYour files stay untouched.").FontSize(11).TextColor(t.TextMuted).LineHeight(1.6)
@@ -370,4 +409,4 @@ const quietChinese = `# 慢一点，写下来
 中英文可以自然地放在一起：a little space to think。偶尔也可以留下一个小小的记号 ☀️。
 `
 
-const typesettingMarkdown = "---\ntitle: A small notebook\n---\n\n# Markdown stays yours\n\nHeadings and paragraphs are editable here. Other syntax stays visible as Markdown.\n\n## A code fragment\n\n```go\nfmt.Println(\"Hello, writing\")\n```\n\n## A reference\n\nRead [a quiet page][note] when you have a moment.\n\n[note]: https://example.test/writing \"Notes\"\n\n| Thought | Next step |\n| --- | --- |\n| Begin | Write one sentence |\n"
+const typesettingMarkdown = "---\ntitle: A small notebook\n---\n\n# Markdown stays yours\n\nHeadings, lists, simple quotations and fenced code are editable here. Links and tables keep their Markdown syntax.\n\n## A code fragment\n\n```go\nfmt.Println(\"Hello, writing\")\n```\n\n## A reference\n\nRead [a quiet page][note] when you have a moment.\n\n[note]: https://example.test/writing \"Notes\"\n\n| Thought | Next step |\n| --- | --- |\n| Begin | Write one sentence |\n"

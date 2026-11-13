@@ -27,6 +27,7 @@ type Typesetter struct {
 	input                               typesettingInput
 	appliedStyle                        int
 	services                            ui.Services
+	blockUI                             typesetBlockUI
 }
 
 func NewTypesetter(source *editor.State) *Typesetter {
@@ -54,7 +55,7 @@ func (t *Typesetter) FromSource() {
 			e.ReplaceString(a, z, t.projection.text[start:newEnd], richtext.Attributes{})
 		})
 	}
-	t.projectListStyles()
+	t.projectParagraphStyles()
 	t.Document.SetSelection(t.projection.viewOffset(sel.Anchor), t.projection.viewOffset(sel.Head))
 	t.sourceVersion, t.richVersion = t.Source.Buffer.Version(), t.Document.Version()
 	t.beforeAnchor, t.beforeCaret = t.Document.Selection()
@@ -93,8 +94,12 @@ func (t *Typesetter) Sync() {
 			t.SetList(NumberedList)
 		case "tasks":
 			t.SetList(TaskList)
+		case "quote":
+			t.Quote()
+		case "codeBlock":
+			t.CodeBlock()
 		case "indent", "outdent":
-			t.IndentList(command == "outdent")
+			t.indentBlocks(command == "outdent")
 		default:
 			t.Document.SetText(richtext.NewText(t.projection.text))
 			t.appliedStyle = 0
@@ -125,23 +130,18 @@ func (t *Typesetter) Sync() {
 		first, newLast = 0, len(next)
 	}
 	inserted := next[first:newLast]
+	prepared := t.projection.prepareInsertion(sourceStart, sourceEnd, inserted, sourceStart == 0 && sourceEnd == len(t.projection.source) && sourceStart != sourceEnd)
 	mapSelection := func(pos int) int {
 		if pos < start {
 			return t.projection.sourceOffset(pos)
 		}
 		if pos <= newEnd {
-			return sourceStart + runeByte(inserted, pos-start)
+			return sourceStart + prepared.offset(pos-start)
 		}
-		return t.projection.sourceOffset(pos-newEnd+oldEnd) + len(inserted) - (sourceEnd - sourceStart)
+		return t.projection.sourceOffset(pos-newEnd+oldEnd) + len(prepared.text) - (sourceEnd - sourceStart)
 	}
 	anchor, caret := mapSelection(a), mapSelection(z)
-	t.Source.Select(sourceStart, sourceEnd)
-	if inserted == "" {
-		t.Source.Run(editor.Delete)
-	} else {
-		t.Source.Insert(inserted)
-	}
-	t.Source.Select(anchor, caret)
+	t.applyProjectedEdit(sourceStart, sourceEnd, prepared.text, anchor, caret)
 	t.FromSource()
 }
 
@@ -173,7 +173,10 @@ func (t *Typesetter) Insert(text string) {
 	if min(a, z) == 0 && max(a, z) == utf8.RuneCountInString(t.projection.text) && a != z {
 		t.Source.Select(0, t.Source.Buffer.Len())
 	}
-	t.Source.Insert(text)
+	sel := t.Source.Selection()
+	prepared := t.projection.prepareInsertion(sel.Start(), sel.End(), text, sel.Start() == 0 && sel.End() == t.Source.Buffer.Len() && !sel.Empty())
+	end := sel.Start() + len(prepared.text)
+	t.applyProjectedEdit(sel.Start(), sel.End(), prepared.text, end, end)
 	t.FromSource()
 }
 
@@ -186,7 +189,8 @@ func (t *Typesetter) DeleteSelection() {
 	if min(a, z) == 0 && max(a, z) == t.Document.Text().Len() {
 		t.Source.Select(0, t.Source.Buffer.Len())
 	}
-	t.Source.Run(editor.Delete)
+	sel := t.Source.Selection()
+	t.applyProjectedEdit(sel.Start(), sel.End(), "", sel.Start(), sel.Start())
 	t.FromSource()
 }
 
@@ -211,6 +215,17 @@ func (t *Typesetter) Heading(level int) {
 	t.ToSource()
 	sel := t.Source.Selection()
 	i := t.projection.sourceLine(sel.Start())
+	if level == 0 {
+		if code, ok := t.projection.codeAt(i); ok {
+			t.unwrapCode(code)
+			return
+		}
+		if t.projection.lines[i].block.quote > 0 {
+			first, last := t.selectedLines()
+			t.changeQuote(first, last, true)
+			return
+		}
+	}
 	if !t.projection.canList(i) {
 		t.Notice = "Choose an ordinary paragraph to change its heading."
 		return
@@ -225,7 +240,7 @@ func (t *Typesetter) Heading(level int) {
 			t.Notice = "Choose one item without nested content to make a heading."
 			return
 		}
-		t.applyListLines(map[int]string{i: strings.Repeat("#", level) + " " + t.projection.source[line.content:line.end]})
+		t.applyLineChanges(map[int]string{i: strings.Repeat("#", level) + " " + t.projection.source[line.content:line.end]})
 		return
 	}
 	if !SetHeading(t.Source, level) {

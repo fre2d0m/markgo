@@ -2,7 +2,6 @@ package mdeditor
 
 import (
 	"github.com/egoist/mygo/ui"
-	"github.com/egoist/mygo/ui/editor"
 )
 
 // Whole paragraphs retain their original Markdown, including list markers,
@@ -25,6 +24,7 @@ func (t *Typesetter) copySelection(services ui.Services, cut bool) {
 		if z == last.viewStart {
 			end = last.start
 		}
+		start, end = p.wholeCodeRange(start, end)
 		text = p.source[start:end]
 	}
 	services.WriteClipboard(text)
@@ -38,7 +38,7 @@ func (t *Typesetter) copySelection(services ui.Services, cut bool) {
 		} else {
 			t.Source.Select(start, end)
 		}
-		t.Source.Run(editor.Delete)
+		t.applyProjectedEdit(start, end, "", start, start)
 		t.FromSource()
 	}
 }

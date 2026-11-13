@@ -16,6 +16,8 @@ Edit the English or Chinese sample directly. Drag from a heading into a paragrap
 
 The **A little structure** sample adds bullets, decimal steps and tasks. Return continues an item; Return in an empty item steps out one level. Tab/Shift+Tab moves an item and its descendants together. Backspace at an item start steps out too. The Paragraph style menu includes all three list kinds; `Cmd/Ctrl+Shift+8`, `+7`, and `+9` apply bullets, numbers and tasks. Click a checkbox or press `Cmd/Ctrl+Enter` at its item to toggle it. Every action shares Source mode's undo history.
 
+The **Words worth keeping** sample adds simple quotations and fenced code. Return continues a quotation, and Return on an empty quoted line exits one level; Tab/Shift+Tab changes its depth. In code, Return retains indentation and Tab uses the named language's indentation convention (four spaces when unknown). `Cmd/Ctrl+Enter` or the header's Continue action moves to a paragraph after the block. The header changes the language tag or copies just the code body. Paragraph style and the context menu offer Quote and Code block; `Cmd/Ctrl+Shift+Q` and `+K` toggle them. Backspace at the first code line's start removes the fences in one undo step. Complete code selections copy their original Markdown fences; partial text selections copy text.
+
 ## Changes in this checkpoint
 
 | Before | After |
@@ -40,6 +42,16 @@ The **A little structure** sample adds bullets, decimal steps and tasks. Return 
 | Copying display text dropped hidden Markdown | Complete paragraph/item selections copy original syntax; partial sentences copy plain text; keyboard, native menu and context-menu paths agree |
 | Text-service hit testing had no list inset | UTF-16 hit testing shares the displayed hanging indent, including room for long decimal markers |
 | No sample exercised lists and their editing edges | A sixth sample, list behavior tests, expanded differential fuzzing and 27 additional rendered states cover these interactions |
+| Quote prefixes were literal text | Simple parser-confirmed quotations show neutral rules and nested hanging insets, including lazy continuations and empty trailing markers |
+| Quotation edits required manual prefixes | Return, empty-line exit, paste, Tab/Shift+Tab and start-of-line Backspace edit source prefixes with necessary separators |
+| Code fences were ordinary displayed paragraphs | A visible-paragraph map hides paired fences; an empty block has a virtual caret without changing source merely to display it |
+| Code shared prose typography | Code uses a quiet rounded surface, 90% monospace type, preserved indentation and wrapping in all three palettes |
+| No code-specific controls | A 44 DIP header provides language editing, Copy and Continue, original vector icons, 40 DIP targets and restrained hover/press feedback |
+| Language edits and leaving code required Source mode | A self-drawn popup validates language names, preserves trailing info, and restores writing focus; Continue and Cmd/Ctrl+Enter return to prose |
+| Cross-boundary or literal-fence edits could leave broken delimiters | Paired changes join the same source transaction, preserve reversed-selection undo, and extend fences around literal fence content |
+| Text-service mapping only accounted for headings and lists | Quote and code insets, monospace sizing and hidden paragraphs also participate in UTF-16 selection and wrapped hit testing |
+| The sample rail assumed six visible pages | Seven samples share a scrollable rail, with the newly selected page revealed at narrow sizes |
+| Coverage stopped at lists | Quote/code behavior, header cancellation/focus, native-client geometry, line endings, long documents, fresh-parse fuzzing, benchmarks and 36 new rendered states extend the evidence |
 
 ## Engineering decision
 
@@ -57,6 +69,8 @@ The projection retains the pinned parser's incremental document and a compact so
 
 List metadata is derived from the same parser. Paragraph indentation supplies the editable text layout; custom native markers supply Markdown numbering and checkboxes without importing rich-text list serialization. Necessary blank separators prevent an empty nested dash from becoming a Setext underline, and allow a non-1 ordered child to begin a new list. Checkbox input explicitly leaves the parent text-selection handler out of its press while retaining the base button's cancellation behavior. Completed tasks use muted ink; the document never moves or fades when a checkbox changes.
 
+Quote/code metadata is also parser-derived. Physical source records and visible paragraph indices are separate, so fence lines are absent from native text selection while their original bytes remain authoritative. Empty fences reuse a virtual display paragraph; only the first actual edit adds a body line. Inserting a literal closing-fence run extends both delimiters. Selecting across one fence removes the surviving partner in the same source-owned transaction. Code tools act through source edits; neither rich-text serialization nor a second undo stack is introduced. Quoted lists/headings/code, alerts and indented code remain literal in this checkpoint.
+
 Native input methods can call `TextInputClient` without `ObserveInput`. The adapter therefore owns that client rather than relying on keyboard observations to identify composition. Preedit replaces display text only. Cancellation restores the selection and source; confirmation commits once. An immediate final replacement after Unmark replaces that exact commit only if the source version and native range still match. Typing bursts similarly merge only the adapter's own latest version at the same caret; navigation, commands and IME break the burst.
 
 ## Evidence
@@ -65,7 +79,21 @@ Behavior tests cover forward and reversed cross-block selections, pointer drag, 
 
 List tests additionally cover typed markers, split/continued/empty items, reversed multi-item selections, whole subtrees, continuation-line joining, non-1 starts, literal complex siblings, nested numbering, task click cancellation, retained typing focus, native menu commands, clipboard syntax, task composition, 14/18/24 DIP hit geometry, nine-digit markers, LF/CRLF save captures and long-list caret stability. Fresh-parse comparisons now include list ownership, indentation, checked state and ordinals. A 15-second list-focused fuzz run completed 60,938 cases without a mismatch.
 
-Rendered evidence comes from the actual Go view through `ui.NewTester`, not a browser or design mockup. The screenshot matrix has **69 states**: 23 scenes × three palettes. It retains the 14 earlier scenes and adds list overview, narrow list, task toggling/hover, list selection, empty task, list source, long markers with 24 DIP book typography, list menu and unsupported-block feedback. Writing, Chinese and list overview use 1320×840; other scenes use 960×640. All states are recaptured and inspected after visible changes.
+Rendered evidence comes from the actual Go view through `ui.NewTester`, not a browser or design mockup. The screenshot matrix has **105 states**: 35 scenes × three palettes. It retains the 23 earlier writing/list scenes and adds quote/code overview, narrow overview, source, empty/deep quotes, empty code, language popup, invalid-language feedback, copy feedback, 24 DIP wrapped code, code selection and preedit. Writing, Chinese, list and quote/code overviews use 1320×840; other scenes use 960×640. All states were recaptured and inspected, including 18 contact sheets and full-size checks of new controls.
+
+Quote/code tests cover continuation, empty exit, lazy quotes, nested indentation, paired and unfinished fences, virtual empty input, literal fence typing/paste, crossing multiple code boundaries, reversed-selection undo, language suffix preservation, clipboard ranges, header cancellation/focus, source-mode history, LF/CRLF bytes and long-document caret stability. Direct native-client tests check surrogate pairs and wrapped quote/code hit geometry at 14/18/24 DIP type and 1×/1.5×/2× scale. The fresh-parse oracle also compares visible paragraph indices, physical block ownership and fence ranges. A 20-second fuzz run completed **95,048 cases** without mismatch.
+
+The same quote/code fixture on merged main `9367a71` and this checkpoint:
+
+![Literal quotes and fences before this change](../design/images/typesetting/paper-blocks-before.png)
+
+![Source-backed quote and code editing in Paper](../design/images/typesetting/paper-blocks.png)
+
+![Code language popup in Graphite](../design/images/typesetting/graphite-code-language.png)
+
+![Language validation in Paper](../design/images/typesetting/paper-code-error.png)
+
+![Wrapped large code text in Warm paper](../design/images/typesetting/warm-code-large.png)
 
 ![Editable Chinese page, headless rendering](../design/images/typesetting/paper-chinese.png)
 
@@ -101,14 +129,27 @@ Raw [before](benchmarks/typesetting-2026-11-13-before.txt) and [after](benchmark
 
 The list checkpoint repeats the same fixed workloads against merged main `b1d63c2` on the same machine/toolchain, without concurrent build jobs. Medians of three × 200 operations remain close: ordinary continuous input is 3.29 → 3.25 ms with 1.31 MB allocated; complete-preview edit/undo is 9.29 → 9.30 ms with 4.93 MB allocated. A separate 3,500-task, 100,000+ character fixture takes 19.87 ms and 6.71 MB per edit/undo cycle. This measures a different, list-heavy workload and is not an improvement claim. Raw [list baseline](benchmarks/lists-2026-11-13-before.txt) and [list checkpoint](benchmarks/lists-2026-11-13-after.txt) outputs are retained.
 
+The quote/code checkpoint compares merged main `9367a71` with this implementation, on the same M2 Max and Go 1.27.4, with no competing build/test jobs. Arithmetic means of three runs × 200 operations:
+
+| Fixed workload | Before | After |
+| --- | --- | --- |
+| Ordinary edit/undo at start | 1.62 ms / 5.43 MB | 1.75 ms / 5.44 MB |
+| Ordinary edit/undo in middle | 5.06 ms / 4.44 MB | 5.03 ms / 4.44 MB |
+| Ordinary edit/undo at end | 8.41 ms / 2.88 MB | 7.90 ms / 3.02 MB |
+| Continuous single-character input | 3.25 ms / 1.31 MB | 3.38 ms / 1.31 MB |
+| Complete-preview edit/undo | 9.68 ms / 4.93 MB | 9.46 ms / 4.94 MB |
+| 1,800 quote/code groups, 108,000 characters | 5.25 ms / 4.84 MB | 5.82 ms / 4.43 MB |
+
+The last row uses identical source on both revisions; the baseline displays the quote/fence syntax literally, while the new revision draws structured blocks and controls. It measures the cost of the new behavior, not a speed improvement. All values remain headless CPU measurements, not native latency acceptance. Raw [quote/code baseline](benchmarks/blocks-2026-11-13-before.txt) and [quote/code checkpoint](benchmarks/blocks-2026-11-13-after.txt) outputs are retained.
+
 Local `go test ./...`, module consistency, Go vet, MyGo vet for both entries, staticcheck and macOS/Windows preview packaging are checked for this checkpoint. The local `make` shim is blocked by an unaccepted Xcode license, so its component checks are run individually; CI runs the actual Make target and race detector.
 
 **Native acceptance is still pending.** The computer-use tool did not grant access to the standalone preview application. No real desktop screenshot, OS candidate-window check, Windows drag/Snap/DPI check or OS clipboard acceptance is claimed. Calling the native client directly in tests verifies the adapter contract, not the behavior of an installed input method.
 
 ## Limits and next gates
 
-- Structured presentation covers top-level ATX headings and ordinary lists/tasks with up to eight levels. Optional closing heading marks, inline syntax, quoted lists, compact same-line nesting, block-first complex items, code, front matter, images and tables remain literal Markdown. Unsupported formatting actions explain the boundary instead of rewriting those blocks.
+- Structured presentation covers top-level ATX headings, ordinary lists/tasks, simple quotations (up to eight levels), and top-level fenced code. Optional closing heading marks, inline syntax, quoted lists/headings/code, alerts, indented code, compact same-line nesting, block-first complex items, front matter, images and tables remain literal Markdown. Code wraps and uses neutral monospace text; syntax highlighting and horizontal code scrolling are not implemented. Unsupported formatting actions explain the boundary instead of rewriting those blocks.
 - Physical source lines remain separate display paragraphs; soft-line-break paragraph fusion and blank-line spacing need a deliberate model before expanding block support.
 - Incremental projection and retained layout now reduce ordinary typing costs. Full-string snapshots, offset updates, native text-service range queries, long single-paragraph behavior and sustained live-heap use still need profiling. Precise paragraph anchoring across mode switches, native text-service hit testing, multi-line preedit and actual desktop input latency remain integration gates.
 - Current history is in memory; this preview does not save or recover edits. The production editor's recovery implementation is separate and unchanged.
-- Next: source-preserving quotes and code blocks. Native Windows/macOS IME and selection acceptance remains required before integration with ordinary documents. Images, tables and export follow the [beta delivery plan](beta-delivery.md). Do not promote this adapter to ordinary files just because the sample looks finished.
+- Next: inline emphasis and links, then image/table editing through the same source model. Native Windows/macOS IME and selection acceptance remains required before integration with ordinary documents. Export follows the [beta delivery plan](beta-delivery.md). Do not promote this adapter to ordinary files just because the sample looks finished.
