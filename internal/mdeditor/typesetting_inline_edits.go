@@ -33,11 +33,11 @@ func (p *typesetProjection) inlineEditPairs(a, z int, text string) []editor.Edit
 			continue
 		}
 		body := p.source[m.content:a] + text + p.source[z:m.contentEnd]
-		prefix, suffix := inlineDelimiters(InlineCode, body)
+		needed, _ := inlineDelimiters(InlineCode, body)
 		oldPrefix, oldSuffix := p.source[m.start:m.content], p.source[m.contentEnd:m.end]
-		length := max(len(strings.TrimSpace(prefix)), len(strings.TrimSpace(oldPrefix)))
-		pad := strings.HasSuffix(prefix, " ") || strings.HasSuffix(oldPrefix, " ") && strings.Trim(body, " ") != ""
-		prefix, suffix = strings.Repeat("`", length), strings.Repeat("`", length)
+		length := max(len(strings.TrimSpace(needed)), len(strings.TrimSpace(oldPrefix)))
+		pad := strings.HasSuffix(needed, " ") || strings.HasSuffix(oldPrefix, " ") && strings.Trim(body, " ") != ""
+		prefix, suffix := strings.Repeat("`", length), strings.Repeat("`", length)
 		if pad {
 			prefix += " "
 			suffix = " " + suffix
