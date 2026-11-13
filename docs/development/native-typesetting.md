@@ -18,10 +18,19 @@ The **A little structure** sample adds bullets, decimal steps and tasks. Return 
 
 The **Words worth keeping** sample adds simple quotations and fenced code. Return continues a quotation, and Return on an empty quoted line exits one level; Tab/Shift+Tab changes its depth. In code, Return retains indentation and Tab uses the named language's indentation convention (four spaces when unknown). `Cmd/Ctrl+Enter` or the header's Continue action moves to a paragraph after the block. The header changes the language tag or copies just the code body. Paragraph style and the context menu offer Quote and Code block; `Cmd/Ctrl+Shift+Q` and `+K` toggle them. Backspace at the first code line's start removes the fences in one undo step. Complete code selections copy their original Markdown fences; partial text selections copy text.
 
+The **A little emphasis** sample adds bold, italic, strikethrough, inline code and links. The top row of Paragraph style offers all five, with `Cmd/Ctrl+B`, `+I`, `+Shift+X`, `+E` and `+K`. Selecting text applies or removes formatting; a caret inside a format removes that span. At an empty plain caret, a format arms the next insertion without adding placeholder text. Escape, changing pages or leaving Typeset cancels that intent. Left/Right can move across a hidden delimiter without consuming a visible character, letting writing continue inside or outside a format.
+
+`Cmd/Ctrl+K` opens a small Text/Address panel. Apply, Cancel, Remove and Escape return to writing. Editing a reference link changes only that occurrence into an explicit link, retaining its title and leaving the shared definition untouched. An unchanged link is not rewritten. Editing does not launch a browser. Whole-paragraph clipboard selections retain Markdown; partial selections copy displayed text.
+
 ## Changes in this checkpoint
 
 | Before | After |
 | --- | --- |
+| Inline delimiters and link addresses were visible in Typeset | Parser-confirmed spans draw bold, italic, strike, neutral code chips and understated link underlines while preserving original source |
+| Inline formatting was available only in source | A compact five-icon row, context menu and shortcuts share source edits, selection and undo |
+| Link labels and destinations required source editing | A native two-field panel validates Markdown, preserves existing nested labels/titles, and returns focus after Apply, Cancel, Remove or Escape |
+| Hidden marks could make edits consume the wrong side of a delimiter | Start/end affinity, paired-boundary cleanup, backtick extension and explicit caret affinity keep edits source-backed |
+| Checking every global rich-text run made dense inline editing expensive | Paragraph-relative style signatures retain unchanged attributes; changed and composing paragraphs are verified against fresh projection in tests |
 | Editable source uses one font size; larger headings are available in the separate reader | The preview directly edits headings and paragraphs with native variable-size text layout, a 720 DIP page, 18 DIP body text and 1.75 line height |
 | Reading and source have different roles | Typeset and Source edit the same canonical `editor.Buffer`; view switches transfer the primary selection and retain history |
 | No runnable source-preserving rich-text adapter | A rune-to-source-byte map hides top-level ATX prefixes and applies precise edits without Markdown serialization |
@@ -71,6 +80,8 @@ List metadata is derived from the same parser. Paragraph indentation supplies th
 
 Quote/code metadata is also parser-derived. Physical source records and visible paragraph indices are separate, so fence lines are absent from native text selection while their original bytes remain authoritative. Empty fences reuse a virtual display paragraph; only the first actual edit adds a body line. Inserting a literal closing-fence run extends both delimiters. Selecting across one fence removes the surviving partner in the same source-owned transaction. Code tools act through source edits; neither rich-text serialization nor a second undo stack is introduced. Quoted lists/headings/code, alerts and indented code remain literal in this checkpoint.
 
+Inline metadata contains sparse hidden byte intervals and source spans per affected physical line, rather than a per-character source map. A selection begins after an opening mark and ends before a closing mark; an explicit source caret can retain either side. Deleting a complete formatted phrase removes empty wrappers, and crossing one boundary removes its surviving partner in the same transaction. Native text-service hit testing shares the renderer's typography, including bold, italic and code padding. Cached relative style signatures avoid enumerating global text runs on each input; a source paragraph edit or preedit clears the affected cache entries, including equal-length replacements.
+
 Native input methods can call `TextInputClient` without `ObserveInput`. The adapter therefore owns that client rather than relying on keyboard observations to identify composition. Preedit replaces display text only. Cancellation restores the selection and source; confirmation commits once. An immediate final replacement after Unmark replaces that exact commit only if the source version and native range still match. Typing bursts similarly merge only the adapter's own latest version at the same caret; navigation, commands and IME break the burst.
 
 ## Evidence
@@ -79,7 +90,19 @@ Behavior tests cover forward and reversed cross-block selections, pointer drag, 
 
 List tests additionally cover typed markers, split/continued/empty items, reversed multi-item selections, whole subtrees, continuation-line joining, non-1 starts, literal complex siblings, nested numbering, task click cancellation, retained typing focus, native menu commands, clipboard syntax, task composition, 14/18/24 DIP hit geometry, nine-digit markers, LF/CRLF save captures and long-list caret stability. Fresh-parse comparisons now include list ownership, indentation, checked state and ordinals. A 15-second list-focused fuzz run completed 60,938 cases without a mismatch.
 
-Rendered evidence comes from the actual Go view through `ui.NewTester`, not a browser or design mockup. The screenshot matrix has **105 states**: 35 scenes × three palettes. It retains the 23 earlier writing/list scenes and adds quote/code overview, narrow overview, source, empty/deep quotes, empty code, language popup, invalid-language feedback, copy feedback, 24 DIP wrapped code, code selection and preedit. Writing, Chinese, list and quote/code overviews use 1320×840; other scenes use 960×640. All states were recaptured and inspected, including 18 contact sheets and full-size checks of new controls.
+Rendered evidence comes from the actual Go view through `ui.NewTester`, not a browser or design mockup. The screenshot matrix has **141 states**: 47 scenes × three palettes. It retains the 35 writing/list/quote/code scenes and adds inline overview, narrow overview, source, selection, formatting menu, link editing/creation/error, 24 DIP typography, preedit, empty page and unsupported-selection feedback. Writing, Chinese, list, quote/code and inline overviews use 1320×840; other scenes use 960×640. All states were captured and inspected through 24 contact sheets and full-size checks of the new controls.
+
+Inline tests cover nested marks, source-preserving edits, paired-boundary deletion, backticks, reversed selection, partial format removal, empty-caret intent, keyboard/native-menu commands, plain/Markdown clipboard boundaries, reference-link isolation, title preservation, link validation/focus, LF/CRLF capture, cached-versus-fresh attributes and unchanged-text composition. Direct text-service tests check wrapped mixed styles with CJK and surrogate pairs at 14/18/24 DIP and 1×/1.5×/2× scale. The projection fuzz oracle now includes sparse inline spans and hidden intervals; the final 20-second run completed **59,035 cases** without a mismatch.
+
+The same inline sample on merged main `5929f09` and this checkpoint:
+
+![Literal inline marks before this change](../design/images/typesetting/paper-inline-before.png)
+
+![Editable inline typography in Paper](../design/images/typesetting/paper-inline.png)
+
+![Compact formatting menu in Warm paper](../design/images/typesetting/warm-inline-menu.png)
+
+![Native link editing in Graphite](../design/images/typesetting/graphite-inline-link.png)
 
 Quote/code tests cover continuation, empty exit, lazy quotes, nested indentation, paired and unfinished fences, virtual empty input, literal fence typing/paste, crossing multiple code boundaries, reversed-selection undo, language suffix preservation, clipboard ranges, header cancellation/focus, source-mode history, LF/CRLF bytes and long-document caret stability. Direct native-client tests check surrogate pairs and wrapped quote/code hit geometry at 14/18/24 DIP type and 1×/1.5×/2× scale. The fresh-parse oracle also compares visible paragraph indices, physical block ownership and fence ranges. A 20-second fuzz run completed **95,048 cases** without mismatch.
 
@@ -144,12 +167,26 @@ The last row uses identical source on both revisions; the baseline displays the 
 
 Local `go test ./...`, module consistency, Go vet, MyGo vet for both entries, staticcheck and macOS/Windows preview packaging are checked for this checkpoint. The local `make` shim is blocked by an unaccepted Xcode license, so its component checks are run individually; CI runs the actual Make target and race detector.
 
-**Native acceptance is still pending.** The computer-use tool did not grant access to the standalone preview application. No real desktop screenshot, OS candidate-window check, Windows drag/Snap/DPI check or OS clipboard acceptance is claimed. Calling the native client directly in tests verifies the adapter contract, not the behavior of an installed input method.
+For the inline checkpoint, the same fixed workload ran on `5929f09` and this change: Apple M2 Max, Go 1.27.4, 200 cycles × three runs, medians below. The dense fixture has 1,600 groups and 145,600 Unicode characters. The baseline renders inline syntax literally, so its result measures the cost before adding the new behavior, not equivalent typesetting.
+
+| Workload | Baseline | Inline checkpoint |
+| --- | ---: | ---: |
+| Ordinary edit/undo — start | 1.56 ms / 5.44 MB | 2.09 ms / 5.44 MB |
+| Ordinary edit/undo — middle | 4.75 ms / 4.44 MB | 5.34 ms / 4.44 MB |
+| Ordinary edit/undo — end | 7.67 ms / 3.02 MB | 8.09 ms / 3.02 MB |
+| Ordinary headless typing | 3.25 ms / 1.31 MB | 3.53 ms / 1.31 MB |
+| Complete-preview edit/undo | 9.32 ms / 4.94 MB | 9.58 ms / 4.94 MB |
+| Dense inline edit/undo | 5.72 ms / 4.82 MB | 10.04 ms / 8.09 MB |
+
+Raw [inline baseline](benchmarks/inlines-2026-11-13-before.txt) and [inline checkpoint](benchmarks/inlines-2026-11-13-after.txt) outputs are retained. These are headless CPU measurements, not native input latency. Dense inline projection still allocates more than ordinary text and needs sustained native-session profiling before integration.
+
+**Native acceptance is still pending.** The Roundtable desktop screenshot request for `dev.markgo.writing-preview` returned “请在主机上打开指定应用，并保留一个运行实例。” No real desktop screenshot, OS candidate-window check, Windows drag/Snap/DPI check or OS clipboard acceptance is claimed. Calling the native client directly in tests verifies the adapter contract, not the behavior of an installed input method.
 
 ## Limits and next gates
 
-- Structured presentation covers top-level ATX headings, ordinary lists/tasks, simple quotations (up to eight levels), and top-level fenced code. Optional closing heading marks, inline syntax, quoted lists/headings/code, alerts, indented code, compact same-line nesting, block-first complex items, front matter, images and tables remain literal Markdown. Code wraps and uses neutral monospace text; syntax highlighting and horizontal code scrolling are not implemented. Unsupported formatting actions explain the boundary instead of rewriting those blocks.
+- Structured presentation covers top-level ATX headings, ordinary lists/tasks, simple quotations (up to eight levels), top-level fenced code, emphasis/strong/strike, single-line inline code and explicit/reference links. Optional closing heading marks, quoted lists/headings/code, alerts, indented code, compact same-line nesting, block-first complex items, front matter, images and tables remain literal Markdown. Code wraps and uses neutral monospace text; syntax highlighting and horizontal code scrolling are not implemented.
+- Inline commands operate within one physical paragraph; selections crossing half of another format explain the boundary. Existing multiline emphasis is displayed, but multiline inline code/links, automatic URL opening, decoded escape/entity presentation and advanced link syntax editing remain source operations. Original bytes are retained when these forms are left unchanged.
 - Physical source lines remain separate display paragraphs; soft-line-break paragraph fusion and blank-line spacing need a deliberate model before expanding block support.
 - Incremental projection and retained layout now reduce ordinary typing costs. Full-string snapshots, offset updates, native text-service range queries, long single-paragraph behavior and sustained live-heap use still need profiling. Precise paragraph anchoring across mode switches, native text-service hit testing, multi-line preedit and actual desktop input latency remain integration gates.
 - Current history is in memory; this preview does not save or recover edits. The production editor's recovery implementation is separate and unchanged.
-- Next: inline emphasis and links, then image/table editing through the same source model. Native Windows/macOS IME and selection acceptance remains required before integration with ordinary documents. Export follows the [beta delivery plan](beta-delivery.md). Do not promote this adapter to ordinary files just because the sample looks finished.
+- Next: image insertion and basic GFM table editing through the same source model. Native Windows/macOS IME and selection acceptance remains required before integration with ordinary documents. Export follows the [beta delivery plan](beta-delivery.md). Do not promote this adapter to ordinary files just because the sample looks finished.

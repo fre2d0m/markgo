@@ -10,11 +10,11 @@ import (
 )
 
 type typesetLine struct {
-	start, content, end int // UTF-8 source offsets
-	viewStart, viewByte int // projected rune and byte offsets
-	runes, heading      int // visible length; ATX level
-	list                typesetListStyle
-	block               typesetBlockLine
+	start, content, end      int // UTF-8 source offsets
+	viewStart, viewByte      int // projected rune and byte offsets
+	runes, rawRunes, heading int // visible/source content length; ATX level
+	list                     typesetListStyle
+	block                    typesetBlockLine
 }
 
 type typesetProjection struct {
@@ -28,6 +28,8 @@ type typesetProjection struct {
 	blockLines   []typesetBlockLine
 	codes        []typesetCode
 	visible      []int // display paragraph -> physical source line
+	inlines      []typesetInline
+	inlineLines  map[int]inlineLine
 }
 
 func projectTypesetting(source string) typesetProjection {
@@ -145,9 +147,10 @@ func (p *typesetProjection) update(source string) {
 		if touched || level != line.heading || list.style != line.list || structure != line.block || content != line.content {
 			styleChanged = styleChanged || level != line.heading || list.style != line.list || structure != line.block
 			line.content, line.heading, line.list, line.block = content, level, list.style, structure
-			line.runes = utf8.RuneCountInString(source[content:line.end])
+			line.rawRunes = utf8.RuneCountInString(source[content:line.end])
 		}
 	}
+	p.projectInlines(source, frontEnd)
 	// Hidden fence lines do not create fake editable paragraphs. The compact
 	// physical records remain authoritative for source edits; visible indexes
 	// address native paragraphs and keep their retained layout on text patches.
@@ -158,6 +161,7 @@ func (p *typesetProjection) update(source string) {
 	viewStart := 0
 	for i := range p.lines {
 		line := &p.lines[i]
+		line.runes = line.rawRunes
 		if line.block.hidden {
 			continue
 		}
@@ -166,7 +170,13 @@ func (p *typesetProjection) update(source string) {
 			viewStart++
 		}
 		line.viewStart, line.viewByte = viewStart, shown.Len()
-		shown.WriteString(source[line.content:line.end])
+		start := line.content
+		for _, h := range p.inlineLines[i].holes {
+			shown.WriteString(source[start:h.start])
+			line.runes -= utf8.RuneCountInString(source[h.start:h.end])
+			start = h.end
+		}
+		shown.WriteString(source[start:line.end])
 		viewStart += line.runes
 		p.visible = append(p.visible, i)
 	}
@@ -203,12 +213,13 @@ func (p *typesetProjection) sourceLine(offset int) int {
 func (p *typesetProjection) sourceOffset(runeOffset int) int {
 	runeOffset = max(0, min(runeOffset, p.len()))
 	i := max(0, sort.Search(len(p.visible), func(i int) bool { return p.lines[p.visible[i]].viewStart > runeOffset })-1)
-	line := p.lines[p.visible[i]]
-	return line.content + runeByte(p.source[line.content:line.end], runeOffset-line.viewStart)
+	line := p.visible[i]
+	return p.inlineSourceOffset(line, runeOffset-p.lines[line].viewStart, true)
 }
 
 func (p *typesetProjection) viewOffset(byteOffset int) int {
 	byteOffset = max(0, min(byteOffset, len(p.source)))
-	line := p.lines[p.sourceLine(byteOffset)]
-	return line.viewStart + utf8.RuneCountInString(p.source[line.content:max(line.content, min(byteOffset, line.end))])
+	i := p.sourceLine(byteOffset)
+	line := p.lines[i]
+	return line.viewStart + p.inlineViewOffset(i, byteOffset)
 }
