@@ -15,6 +15,7 @@ import (
 )
 
 type App struct {
+	workspaceSession
 	files              []*mdeditor.File
 	selected           string
 	query              string
@@ -59,19 +60,20 @@ func New() *App {
 	file := mdeditor.NewFile("Untitled 1.md", "")
 	file.ID = "document-1"
 	return &App{
-		files:       []*mdeditor.File{file},
-		selected:    file.ID,
-		nextID:      1,
-		preview:     true,
-		appearance:  defaultAppearance(),
-		sidebar:     true,
-		disk:        make(map[string]storage.Snapshot),
-		expanded:    make(map[string]*bool),
-		analyses:    make(map[string]*analysisCache),
-		conflicts:   make(map[string]bool),
-		checking:    make(map[string]bool),
-		savedEvents: make(map[string]uint64),
-		notice:      "",
+		workspaceSession: workspaceSession{backedUp: make(map[string]uint64), recovered: make(map[string]string), recentMissing: make(map[string]string)},
+		files:            []*mdeditor.File{file},
+		selected:         file.ID,
+		nextID:           1,
+		preview:          true,
+		appearance:       defaultAppearance(),
+		sidebar:          true,
+		disk:             make(map[string]storage.Snapshot),
+		expanded:         make(map[string]*bool),
+		analyses:         make(map[string]*analysisCache),
+		conflicts:        make(map[string]bool),
+		checking:         make(map[string]bool),
+		savedEvents:      make(map[string]uint64),
+		notice:           "",
 	}
 }
 
@@ -135,7 +137,7 @@ func (a *App) View(c *ui.Context) {
 			a.current().Focus.Focus(c)
 		}
 	}
-	root := ui.Column(c.Key("workbench")).Fill().Background(c.Theme().Background)
+	root := ui.Column(c.Key("workbench")).Fill().Background(c.Theme().Background).Disabled(a.closing && !a.exitPrompt)
 	showSidebar := a.sidebar && !a.focusMode
 	target := float32(0)
 	if showSidebar {
@@ -144,6 +146,7 @@ func (a *App) View(c *ui.Context) {
 	width := root.AnimateTo("sidebar-width", target, ui.Animation{Duration: 180 * time.Millisecond, Ease: ui.EaseOut})
 	root.Children(func() {
 		a.header(c)
+		a.sessionWarning(c)
 		ui.Row(c.Key("workspace-body")).Grow(1).FillWidth().AlignItems(ui.Stretch).Children(func() {
 			if width > 0.5 {
 				ui.Column(c.Key("sidebar-slot")).Width(width).Shrink(0).FillHeight().Clip().Disabled(!showSidebar).Label("File sidebar").Children(func() { a.fileSidebar(c) })
@@ -154,6 +157,13 @@ func (a *App) View(c *ui.Context) {
 			a.statusBar(c, a.current())
 		}
 	})
+	a.recentDialog(c)
+	a.exitDialog(c)
+	if a.returnToWriting && !a.closing {
+		a.current().Focus.Focus(c)
+		a.returnToWriting = false
+	}
+	a.scheduleRecovery(c)
 }
 
 func (a *App) editorPane(c *ui.Context, f *mdeditor.File) {
@@ -190,7 +200,8 @@ func (a *App) editorPane(c *ui.Context, f *mdeditor.File) {
 		st.SetReplacements(nil)
 	}
 	ui.Column(c).Grow(1).MinWidth(0).FillHeight().Children(func() {
-		if a.conflicts[f.ID] {
+		a.recoveryNotice(c, f)
+		if a.conflicts[f.ID] && a.recovered[f.ID] == "" {
 			ui.Row(c).FillWidth().Padding(8, 18).Gap(10).AlignItems(ui.Center).Background(t.Warning.Alpha(0.12)).Children(func() {
 				ui.Text(c, "Changed outside MarkGo").FontSize(12).Grow(1)
 				if ui.Button(c, "Reload").Label("Reload changed document").Disabled(a.fileBusy).Clicked() {

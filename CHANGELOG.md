@@ -6,6 +6,11 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- Local recovery checkpoints for named and untitled drafts, previous-session restoration, and a searchable recent-document history.
+- Self-drawn exit choices to keep drafts, save all, discard or cancel; final checkpoints complete before closing, with visible failure handling.
+- Recovery review and save-copy guidance for changed or unavailable originals; current-version backup status and safe history removal.
+- Process-termination, stale-write, discard, line-ending, recovery-failure and keyboard-focus regression tests, plus theme/state screenshots.
+
 - Interruptible sidebar motion, a moving Files/Outline indicator, file-row close and context actions, and brief confirmation after a current-version save.
 - A beta delivery plan with data-safety, native editor, output and platform acceptance gates.
 - Paper, Warm paper, and Graphite themes with a system-following option, local preference persistence, text-size controls, Modern/Book typography, and three page widths.

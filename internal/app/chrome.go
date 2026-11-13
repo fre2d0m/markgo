@@ -104,6 +104,10 @@ func (a *App) documentMenu(m *ui.Menu) {
 	if m.Item("Open document…").Icon(menuIcons["file"]).Shortcut(ui.Cmd, ui.KeyO).Disabled(a.fileBusy).Chosen() {
 		a.openDialog()
 	}
+	if m.Item("Recent documents…").Chosen() {
+		a.recentOpen = true
+		a.recentQuery = ""
+	}
 	if m.Item("Open folder…").Icon(menuIcons["folder"]).Disabled(a.fileBusy).Chosen() {
 		a.openFolderDialog()
 	}

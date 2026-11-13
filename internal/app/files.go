@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui/editor"
@@ -28,7 +29,11 @@ func (a *App) Attach(window *mygo.Window) {
 		if a.allowExit {
 			return
 		}
-		if a.saving {
+		if a.closing {
+			event.PreventDefault()
+			return
+		}
+		if a.fileBusy {
 			event.PreventDefault()
 			a.notice = "Please wait for the file operation to finish."
 			window.Invalidate()
@@ -37,13 +42,28 @@ func (a *App) Attach(window *mygo.Window) {
 		if a.hasUnsavedChanges() {
 			event.PreventDefault()
 			a.confirmExit(false)
+		} else if a.sessionStore != nil {
+			event.PreventDefault()
+			a.finishExit(false)
 		}
 	})
 	mygo.App.OnBeforeQuit(func(event *mygo.QuitEvent) {
-		if event.SessionEnding || a.allowExit {
+		if event.SessionEnding {
+			// A final/discard write already contains the user's decision.
+			// Do not resurrect its still-visible buffer during OS shutdown.
+			if a.sessionStore != nil && !a.allowExit && (!a.closing || a.exitPrompt) {
+				a.writeRecovery(a.captureRecovery(false), nil)
+			}
 			return
 		}
-		if a.saving {
+		if a.allowExit {
+			return
+		}
+		if a.closing {
+			event.PreventDefault()
+			return
+		}
+		if a.fileBusy {
 			event.PreventDefault()
 			a.notice = "Please wait for the file operation to finish."
 			window.Invalidate()
@@ -52,6 +72,9 @@ func (a *App) Attach(window *mygo.Window) {
 		if a.hasUnsavedChanges() {
 			event.PreventDefault()
 			a.confirmExit(true)
+		} else if a.sessionStore != nil {
+			event.PreventDefault()
+			a.finishExit(true)
 		}
 	})
 }
@@ -99,43 +122,45 @@ func (a *App) hasUnsavedChanges() bool {
 }
 
 func (a *App) confirmExit(quit bool) {
-	if a.closing || a.fileBusy || a.window == nil {
+	if a.closing || a.fileBusy {
 		return
 	}
-	a.closing = true
-	a.fileBusy = true
-	window := a.window
-	go func() {
-		result, err := mygo.Dialog.Message(mygo.MessageOptions{
-			Parent: window, Type: mygo.MessageWarning,
-			Title: "Unsaved changes", Message: "Some documents have unsaved changes.",
-			Detail:  "Save all documents before closing, or discard their unsaved changes.",
-			Buttons: []string{"Cancel", "Discard changes", "Save all"}, CancelButton: 0,
-			DefaultButton: 2, DestructiveButtons: []int{1},
-		})
-		window.Update(func() {
-			a.closing = false
-			a.fileBusy = false
-			if err != nil {
-				a.notice = "Could not confirm closing: " + err.Error()
-				return
-			}
-			if result.Button == 1 {
-				a.finishExit(quit)
-			} else if result.Button == 2 {
-				a.saveAllAndExit(quit)
-			}
-		})
-	}()
+	a.showExitPrompt(quit, false)
 }
 
 func (a *App) finishExit(quit bool) {
+	a.persistAndExit(quit, true)
+}
+
+func (a *App) persistAndExit(quit, discard bool) {
+	if a.sessionStore != nil {
+		// Freeze editing until the last session write is durable. A pending
+		// older checkpoint cannot restore the revisions just discarded.
+		a.closing, a.fileBusy = true, true
+		a.notice = "Remembering your session…"
+		a.writeRecovery(a.captureRecovery(discard), func(err error) {
+			if err != nil {
+				a.confirmExitWithoutRecovery(quit)
+				return
+			}
+			a.closeNow(quit)
+		})
+		return
+	}
+	a.closeNow(quit)
+}
+
+func (a *App) closeNow(quit bool) {
 	a.allowExit = true
 	if quit {
 		mygo.App.Quit()
-	} else {
-		a.window.Close()
+	} else if a.windowCommands != nil {
+		a.windowCommands.Close()
 	}
+}
+
+func (a *App) confirmExitWithoutRecovery(quit bool) {
+	a.showExitPrompt(quit, true)
 }
 
 // Save one document at a time. Cancellation, a failed save, or a newer edit
@@ -175,6 +200,7 @@ func (a *App) closeDocument(file *mdeditor.File) {
 	}
 	a.fileBusy = true
 	window, fileID, name := a.window, file.ID, file.Name
+	version := file.State.Buffer.Version()
 	go func() {
 		result, err := mygo.Dialog.Message(mygo.MessageOptions{
 			Parent: window, Type: mygo.MessageWarning, Title: "Unsaved changes",
@@ -188,7 +214,11 @@ func (a *App) closeDocument(file *mdeditor.File) {
 			if err != nil {
 				a.notice = "Could not close document: " + err.Error()
 			} else if result.Button == 1 {
-				a.removeDocument(fileID)
+				if file.State.Buffer.Version() != version {
+					a.notice = "Newer edits were kept. Close the document again to review your choice."
+					return
+				}
+				a.discardDocument(fileID)
 			} else if result.Button == 2 {
 				a.saveFile(file, false, func() { a.removeDocument(fileID) })
 			}
@@ -207,6 +237,8 @@ func (a *App) removeDocument(id string) {
 		delete(a.conflicts, id)
 		delete(a.checking, id)
 		delete(a.savedEvents, id)
+		delete(a.recovered, id)
+		delete(a.backedUp, id)
 		if len(a.files) == 0 {
 			a.newDocument()
 		} else if a.selected == id {
@@ -256,6 +288,8 @@ func (a *App) openPath(path string) {
 	for _, file := range a.files {
 		if file.Path == path {
 			a.selected = file.ID
+			a.recentOpen = false
+			a.rememberRecent(path)
 			a.notice = "This document is already open."
 			return
 		}
@@ -268,6 +302,9 @@ func (a *App) openPath(path string) {
 			a.fileBusy = false
 			if err != nil {
 				a.notice = "Could not open document: " + err.Error()
+				if slices.Contains(a.recent, path) {
+					a.recentMissing[path] = err.Error()
+				}
 				return
 			}
 			a.addOpened(file, snapshot)
@@ -286,6 +323,9 @@ func loadDocument(path string) (*mdeditor.File, storage.Snapshot, error) {
 }
 
 func (a *App) addOpened(file *mdeditor.File, snapshot storage.Snapshot) {
+	a.rememberRecent(snapshot.Path)
+	delete(a.recentMissing, snapshot.Path)
+	a.recentOpen = false
 	for _, current := range a.files {
 		if current.Path != "" && current.Path == snapshot.Path {
 			a.selected = current.ID
@@ -407,8 +447,11 @@ func (a *App) saveFile(file *mdeditor.File, saveAs bool, onSaved func()) {
 			file.AcceptSavedSource(source)
 			file.SetLanguage(language)
 			a.disk[fileID] = saved
+			a.rememberRecent(saved.Path)
+			delete(a.recentMissing, saved.Path)
 			delete(a.conflicts, fileID)
 			if file.MarkSavedVersion(captured.Text.Version()) {
+				delete(a.recovered, fileID)
 				a.acknowledgeSave(file)
 				a.notice = ""
 				if onSaved != nil {

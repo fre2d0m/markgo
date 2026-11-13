@@ -101,6 +101,15 @@ func (f *File) AcceptSavedSource(source SavedSource) {
 
 func (f *File) HasMixedLineEndings() bool { return f.mixedLineEndings }
 
+// RecoverFile opens a checkpoint as an unsaved document without manufacturing
+// an undo transaction that could erase the entire recovered draft.
+func RecoverFile(name, source, original string) *File {
+	f := NewFile(name, source)
+	f.RecordSaved([]byte(original))
+	f.savedOutOfSync = true
+	return f
+}
+
 // Modified remains conservative when an earlier snapshot finished saving
 // after the buffer changed. Buffer.MarkSaved can only mark its current text.
 func (f *File) Modified() bool { return f.savedOutOfSync || f.State.Buffer.Modified() }
@@ -132,6 +141,10 @@ type SaveSnapshot struct {
 	originalNormalized string
 	mixedLineEndings   bool
 }
+
+// OriginalSource is immutable and preserves the exact disk bytes, including
+// mixed line endings. Recovery uses it to recognize external changes.
+func (s SaveSnapshot) OriginalSource() string { return s.original }
 
 func (f *File) CaptureForSave() SaveSnapshot {
 	return SaveSnapshot{

@@ -71,7 +71,7 @@ Return continues a list or quote; another Return on an empty item ends it. Find 
 
 ## Save your work
 
-Press Cmd/Ctrl+S to save. A new document asks for a location. The footer tells you whether changes are unsaved. Saving is manual; there is no automatic save or crash recovery.
+Press Cmd/Ctrl+S to save. A new document asks for a location. The footer tells you whether changes are unsaved. Saving your Markdown file is manual. Local recovery copies protect completed checkpoints; choose Keep drafts when closing to continue later.
 
 ## Read and edit
 

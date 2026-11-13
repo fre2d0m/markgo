@@ -23,6 +23,10 @@ func (a *App) acknowledgeSave(file *mdeditor.File) {
 func (a *App) saveStatus(c *ui.Context, file *mdeditor.File, state string) {
 	t := c.Theme()
 	row := ui.Row(c.Key("save-state-" + file.ID)).Gap(6).AlignItems(ui.Center).Label("Save status").Tooltip(file.Path)
+	if version, ok := a.backedUp[file.ID]; ok && version == file.State.Buffer.Version() && file.Modified() && a.sessionError == "" {
+		state = "Draft backed up"
+		row.Tooltip("A local recovery copy is available. Use Save to update your Markdown file.")
+	}
 	pulse := ui.Local(row, "saved", func() savePulse { return savePulse{revision: a.savedEvents[file.ID]} })
 	if pulse.revision != a.savedEvents[file.ID] {
 		pulse.revision = a.savedEvents[file.ID]
