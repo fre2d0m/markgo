@@ -32,7 +32,7 @@ Open a Markdown file or folder, write with source-preserving live preview, and u
 - Search recent documents, keep drafts when closing, and recover completed local checkpoints after an interrupted session.
 - Use source or live-preview editing, a formatted reading view, and focus mode.
 - Write beneath one self-drawn title bar, with integrated window controls and a compact file sidebar.
-- Choose Paper, Warm paper, or Graphite for the whole interface, or follow system appearance.
+- Choose from 12 complete writing themes, including Sakura, Sage, Mist and Graphite, or follow system appearance.
 - Adjust text size, Modern/Book typography, and page width; appearance preferences stay on your device.
 - See word and character counts, modified-document markers, and external-file-change warnings.
 

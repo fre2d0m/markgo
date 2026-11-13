@@ -2,9 +2,9 @@ package mdeditor
 
 import (
 	"strings"
-	"time"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/xddcode/markgo/internal/writingui"
 )
 
 type typesetLinkUI struct {
@@ -15,6 +15,7 @@ type typesetLinkUI struct {
 	existing                bool
 	mark                    typesetInline
 	label, address, error   string
+	errorField              string
 	originalLabel, rawLabel string
 }
 
@@ -60,6 +61,7 @@ func (t *Typesetter) OpenLink() bool {
 func (t *Typesetter) applyLink(remove bool) bool {
 	u := &t.linkUI
 	if u.version != t.Source.Buffer.Version() {
+		u.errorField = ""
 		u.error = "The text changed. Close this panel and choose the link again."
 		return false
 	}
@@ -73,11 +75,13 @@ func (t *Typesetter) applyLink(remove bool) bool {
 		}
 		label = u.rawLabel
 	} else if strings.TrimSpace(label) == "" || strings.ContainsAny(label, "\n\r") {
+		u.errorField = "label"
 		u.error = "Add a short, single-line link label."
 		return false
 	}
 	address := strings.TrimSpace(u.address)
 	if !remove && (address == "" || strings.ContainsAny(address, "<>\n\r\t")) {
+		u.errorField = "address"
 		u.error = "Enter a web address, a file path or a #section."
 		return false
 	}
@@ -97,6 +101,7 @@ func (t *Typesetter) applyLink(remove bool) bool {
 			}
 		}
 		if !valid {
+			u.errorField = "both"
 			u.error = "That label or address cannot form a Markdown link."
 			return false
 		}
@@ -146,17 +151,16 @@ func (t *Typesetter) linkPopover(c *ui.Context, view ui.Element) {
 			}
 		}
 		ui.PopoverBase(c, anchor, &u.open, func(panel ui.Element) {
-			panel.Transition(ui.ElementTransition{Duration: 130 * time.Millisecond, ExitDuration: 90 * time.Millisecond, Colors: true, Enter: &ui.Motion{Y: -4, Opacity: 0, Flip: true}, Exit: &ui.Motion{Y: -2, Opacity: 0, Flip: true}})
-			panel.Width(340).Padding(16).Gap(10).Margin(8, 0, 0).Radius(14).Background(th.Background).Border(1, th.Border.Alpha(0.7)).Shadow(0, 8, 28, 0, ui.RGBA(0, 0, 0, 0.09)).Children(func() {
+			writingui.Surface(c, panel).Width(360).Padding(20).Gap(10).Margin(8, 0, 0).Children(func() {
 				title := "Add a link"
 				if u.existing {
 					title = "Edit link"
 				}
-				ui.Text(c, title).FontSize(14).FontWeight(500)
+				ui.Text(c, title).FontSize(15).FontWeight(600).Margin(0, 0, 4)
 				ui.Text(c, "Text").FontSize(12).TextColor(th.TextMuted)
-				text := ui.TextInputBase(c.Key("link-label"), &u.label).FillWidth().Height(40).Padding(6, 10).Background(th.Surface).Border(1, th.Border).Radius(6).FontSize(13).Label("Link text").Placeholder("A few words").OnSubmit(apply).OnChange(func() { u.error = "" })
+				text := writingui.Field(c, ui.TextInputBase(c.Key("link-label"), &u.label), u.error != "" && (u.errorField == "label" || u.errorField == "both")).FillWidth().Label("Link text").Placeholder("A few words").OnSubmit(apply).OnChange(func() { u.error = "" })
 				ui.Text(c, "Address").FontSize(12).TextColor(th.TextMuted)
-				address := ui.TextInputBase(c.Key("link-address"), &u.address).FillWidth().Height(40).Padding(6, 10).Background(th.Surface).Border(1, th.Border).Radius(6).FontSize(13).Label("Link address").Placeholder("https://, a file path, or #section").OnSubmit(apply).OnChange(func() { u.error = "" })
+				address := writingui.Field(c, ui.TextInputBase(c.Key("link-address"), &u.address), u.error != "" && (u.errorField == "address" || u.errorField == "both")).FillWidth().Label("Link address").Placeholder("https://, a file path, or #section").OnSubmit(apply).OnChange(func() { u.error = "" })
 				if u.originalLabel == "" {
 					text.AutoFocus()
 				} else {
@@ -171,7 +175,7 @@ func (t *Typesetter) linkPopover(c *ui.Context, view ui.Element) {
 				}
 				message := ui.Text(c, hint).FillWidth().MinHeight(36).FontSize(12).TextColor(th.TextMuted).LineHeight(1.5)
 				if u.error != "" {
-					message.Role(ui.RoleAlert)
+					message.TextColor(th.Danger).Role(ui.RoleAlert)
 				}
 				ui.Row(c).FillWidth().Gap(4).Children(func() {
 					if u.existing {
@@ -187,8 +191,8 @@ func (t *Typesetter) linkPopover(c *ui.Context, view ui.Element) {
 					cancel := codeButton(c.Key("cancel-link"), "Cancel link edit").Padding(0, 12).Center()
 					cancel.Children(func() { ui.Text(c, "Cancel").FontSize(12).TextColor(th.TextMuted) })
 					cancel.OnClick(close)
-					button := codeButton(c.Key("apply-link"), "Apply link").Padding(0, 14).Background(th.SurfaceHover).Center()
-					button.Children(func() { ui.Text(c, "Apply").FontSize(12).FontWeight(500) })
+					button := writingui.Primary(c, codeButton(c.Key("apply-link"), "Apply link")).Padding(0, 16).Center()
+					button.Children(func() { ui.Text(c, "Apply").FontSize(13).FontWeight(500) })
 					button.OnClick(apply)
 				})
 			})

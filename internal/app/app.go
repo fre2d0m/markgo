@@ -12,6 +12,7 @@ import (
 	"github.com/xddcode/markgo/internal/mdeditor"
 	"github.com/xddcode/markgo/internal/preferences"
 	"github.com/xddcode/markgo/internal/storage"
+	"github.com/xddcode/markgo/internal/writingui"
 )
 
 type App struct {
@@ -45,6 +46,9 @@ type App struct {
 	openQueue          []string
 	appearance         appearance
 	appearanceOpen     bool
+	appearanceWasOpen  bool
+	appearancePanel    ui.Handle
+	appearanceFirst    ui.Handle
 	formatOpen         bool
 	appearanceRevision uint64
 	preferenceStore    *preferences.Store
@@ -204,10 +208,10 @@ func (a *App) editorPane(c *ui.Context, f *mdeditor.File) {
 		if a.conflicts[f.ID] && a.recovered[f.ID] == "" {
 			ui.Row(c).FillWidth().Padding(8, 18).Gap(10).AlignItems(ui.Center).Background(t.Warning.Alpha(0.12)).Children(func() {
 				ui.Text(c, "Changed outside MarkGo").FontSize(12).Grow(1)
-				if ui.Button(c, "Reload").Label("Reload changed document").Disabled(a.fileBusy).Clicked() {
+				if writingui.Button(c, "Reload", false).Label("Reload changed document").Disabled(a.fileBusy).Clicked() {
 					a.reloadDocument(f)
 				}
-				if ui.Button(c, "Keep editing").Label("Keep editing changed document").Clicked() {
+				if writingui.Button(c, "Keep editing", false).Label("Keep editing changed document").Clicked() {
 					delete(a.conflicts, f.ID)
 				}
 			})
@@ -255,9 +259,9 @@ func (a *App) statusBar(c *ui.Context, f *mdeditor.File) {
 		}
 		ui.Text(c, notice).FontSize(11).TextColor(t.TextMuted).Grow(1).MinWidth(0).SingleLine().Ellipsis("…").Tooltip(notice).Role(ui.RoleStatus)
 		if !a.reading {
-			ui.Textf(c, "%d : %d", pos.Line+1, mdeditor.DisplayColumn(f.State)).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted).Tooltip("Line and column")
+			ui.Textf(c, "%d : %d", pos.Line+1, mdeditor.DisplayColumn(f.State)).MinWidth(64).TextAlign(ui.End).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted).Tooltip("Line and column")
 		}
-		ui.Textf(c, "%d words", analysis.Stats.Words).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted)
-		ui.Textf(c, "%d characters", analysis.Stats.Characters).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted)
+		ui.Textf(c, "%d words", analysis.Stats.Words).MinWidth(76).TextAlign(ui.End).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted)
+		ui.Textf(c, "%d characters", analysis.Stats.Characters).MinWidth(104).TextAlign(ui.End).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted)
 	})
 }

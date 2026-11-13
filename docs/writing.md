@@ -26,7 +26,9 @@ The **Formatting** icon opens a small toolbar above the page. It works on one se
 
 ## Appearance and focus
 
-The half-filled circle opens **Appearance**. Choose **Paper**, **Warm paper**, or **Graphite**, or enable **Follow system appearance**. These themes cover the whole interface. Adjust text size, choose **Modern** (system type) or **Book** (serif), and select a Narrow, Comfort, or Wide page. Changes apply immediately and are remembered locally. Switching a color theme preserves the caret, selection, scroll, and undo history. Typography changes reflow the page without changing the Markdown.
+The half-filled circle opens **Appearance**. The gallery offers eight light themes—**Paper**, **Warm paper**, **Sakura**, **Sage**, **Mist**, **Lavender**, **Sand** and **Pearl**—and four dark themes: **Graphite**, **Midnight**, **Pine** and **Plum**. A check marks the active choice. **Follow system appearance** chooses Paper by day-mode settings and Graphite by dark-mode settings. These themes cover the whole interface.
+
+Adjust text size, choose **Modern** (system type) or **Book** (serif), and select a Narrow, Comfort, or Wide page. Changes apply immediately and are remembered locally. Switching a color theme preserves the caret, selection, scroll, and undo history. Typography changes reflow the page without changing the Markdown. Tab moves through the appearance controls; Space or Enter chooses a theme. The close button and Escape return to writing.
 
 Escape closes the panel, and clicking outside returns to the page. The **Focus mode** icon hides navigation and status; **Exit focus mode** restores the workspace. The sidebar icon toggles file navigation independently.
 

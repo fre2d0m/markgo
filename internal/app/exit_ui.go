@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/xddcode/markgo/internal/writingui"
 )
 
 func (a *App) showExitPrompt(quit, failed bool) {
@@ -40,8 +41,7 @@ func (a *App) exitDialog(c *ui.Context) {
 	t := c.Theme()
 	dialog := ui.DialogBase(c.Key("exit-confirmation"), &a.exitPrompt, func(backdrop, panel ui.Element) {
 		backdrop.Background(ui.RGBA(0, 0, 0, 0.18))
-		floatingPanel(panel).Width(560).Padding(24).Gap(18).Radius(14).Background(t.Background).
-			Border(1, t.Border.Alpha(0.6)).Shadow(0, 12, 40, 0, ui.RGBA(0, 0, 0, 0.14)).Label("Close writing session").Children(func() {
+		writingui.Surface(c, panel).Width(560).Padding(24).Gap(20).Label("Close writing session").Children(func() {
 			title, detail := "Leave your writing here?", "Save your documents or discard their unsaved changes before closing."
 			if a.sessionStore != nil {
 				detail = "Keep drafts on this device and continue next time, or save your Markdown files before closing."
@@ -70,19 +70,19 @@ func (a *App) exitDialog(c *ui.Context) {
 			}
 			ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
 				if a.exitPromptError {
-					ui.Button(c, "Exit anyway").Height(40).Label("Exit without updating recovery").OnClick(func() { a.chooseExit("exit") })
+					writingui.Button(c, "Exit anyway", false).TextColor(t.Danger).Label("Exit without updating recovery").OnClick(func() { a.chooseExit("exit") })
 					ui.Spacer(c)
-					ui.PrimaryButton(c, "Stay open").Height(40).Label("Stay open after recovery failure").AutoFocus().OnClick(a.cancelExitPrompt)
+					writingui.Button(c, "Stay open", true).Label("Stay open after recovery failure").AutoFocus().OnClick(a.cancelExitPrompt)
 					return
 				}
-				ui.Button(c, "Cancel").Height(40).Label("Cancel closing").OnClick(a.cancelExitPrompt)
+				writingui.Button(c, "Cancel", false).Label("Cancel closing").OnClick(a.cancelExitPrompt)
 				ui.Spacer(c)
-				ui.Button(c, "Discard").Height(40).Label("Discard unsaved changes").Tooltip("Discard unsaved changes and their recovery copies").OnClick(func() { a.chooseExit("discard") })
+				writingui.Button(c, "Discard", false).TextColor(t.Danger).Label("Discard unsaved changes").Tooltip("Discard unsaved changes and their recovery copies").OnClick(func() { a.chooseExit("discard") })
 				if a.sessionStore != nil {
-					ui.Button(c, "Save all").Height(40).Label("Save all before closing").OnClick(func() { a.chooseExit("save") })
-					ui.PrimaryButton(c, "Keep drafts").Height(40).Label("Keep drafts and close").AutoFocus().OnClick(func() { a.chooseExit("keep") })
+					writingui.Button(c, "Save all", false).Label("Save all before closing").OnClick(func() { a.chooseExit("save") })
+					writingui.Button(c, "Keep drafts", true).Label("Keep drafts and close").AutoFocus().OnClick(func() { a.chooseExit("keep") })
 				} else {
-					ui.PrimaryButton(c, "Save all").Height(40).Label("Save all before closing").AutoFocus().OnClick(func() { a.chooseExit("save") })
+					writingui.Button(c, "Save all", true).Label("Save all before closing").AutoFocus().OnClick(func() { a.chooseExit("save") })
 				}
 			})
 		})

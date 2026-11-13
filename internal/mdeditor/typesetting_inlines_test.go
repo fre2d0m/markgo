@@ -165,8 +165,16 @@ func TestTypesettingLinkPanelHistoryAndFocus(t *testing.T) {
 	tt.Key(ui.Cmd, ui.KeyA)
 	tt.Key(0, ui.KeyBackspace)
 	blockClick(t, tt, "Apply link")
-	if !s.linkUI.open || s.linkUI.error == "" {
+	if !s.linkUI.open || s.linkUI.error == "" || s.linkUI.errorField != "address" {
 		t.Fatal("invalid address closed panel")
+	}
+	wantSource(t, s, source)
+	blockClick(t, tt, "Link text")
+	tt.Key(ui.Cmd, ui.KeyA)
+	tt.Key(0, ui.KeyBackspace)
+	blockClick(t, tt, "Apply link")
+	if s.linkUI.errorField != "label" {
+		t.Fatal("an invalid label marked the address instead")
 	}
 	wantSource(t, s, source)
 	tt.Key(0, ui.KeyEscape)

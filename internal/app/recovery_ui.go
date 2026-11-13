@@ -8,6 +8,7 @@ import (
 
 	"github.com/egoist/mygo/ui"
 	"github.com/xddcode/markgo/internal/mdeditor"
+	"github.com/xddcode/markgo/internal/writingui"
 )
 
 func (a *App) sessionWarning(c *ui.Context) {
@@ -26,13 +27,13 @@ func (a *App) sessionWarning(c *ui.Context) {
 		ui.Text(c, message).FontSize(12).TextColor(t.Text).Grow(1).MinWidth(0).Role(ui.RoleStatus).Tooltip(a.sessionError)
 		if a.sessionError != "" {
 			if a.sessionStore != nil {
-				ui.Button(c, "Try again").Height(40).Label("Retry recovery backup").OnClick(func() {
+				writingui.Button(c, "Try again", false).Label("Retry recovery backup").OnClick(func() {
 					a.sessionError = ""
 					a.sessionObserved = nil
 				})
 			}
 		} else {
-			ui.Button(c, "Review").Height(40).Label("Review unavailable documents").OnClick(func() { a.recentOpen = true })
+			writingui.Button(c, "Review", false).Label("Review unavailable documents").OnClick(func() { a.recentOpen = true })
 		}
 	})
 }
@@ -54,7 +55,7 @@ func (a *App) recoveryNotice(c *ui.Context, file *mdeditor.File) {
 		if copy {
 			label = "Save a copy"
 		}
-		ui.Button(c, label).Height(40).Shrink(0).Label("Save recovered draft").Disabled(a.fileBusy).OnClick(func() { a.saveFile(file, copy, nil) })
+		writingui.Button(c, label, false).Background(t.Background).Border(1, t.Border).Shrink(0).Label("Save recovered draft").Disabled(a.fileBusy).OnClick(func() { a.saveFile(file, copy, nil) })
 		iconButton(c, "dismiss-recovery", "close", "Dismiss recovery notice").OnClick(func() { delete(a.recovered, file.ID) })
 	})
 }
@@ -63,8 +64,7 @@ func (a *App) recentDialog(c *ui.Context) {
 	t := c.Theme()
 	ui.DialogBase(c.Key("recent-documents"), &a.recentOpen, func(backdrop, panel ui.Element) {
 		backdrop.Background(ui.RGBA(0, 0, 0, 0.18))
-		floatingPanel(panel).Width(560).Height(472).Padding(20).Gap(12).Radius(14).
-			Background(t.Background).Border(1, t.Border.Alpha(0.6)).Shadow(0, 12, 40, 0, ui.RGBA(0, 0, 0, 0.14)).Label("Recent documents dialog").Children(func() {
+		writingui.Surface(c, panel).Width(560).Height(488).Padding(24).Gap(16).Label("Recent documents dialog").Children(func() {
 			ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
 				ui.Column(c).Grow(1).Gap(4).Children(func() {
 					ui.Text(c, "Pick up where you left off").FontSize(18).FontWeight(500).LetterSpacing(-0.3)
@@ -72,7 +72,7 @@ func (a *App) recentDialog(c *ui.Context) {
 				})
 				iconButton(c, "close-recent", "close", "Close recent documents").OnClick(func() { a.recentOpen = false })
 			})
-			ui.SearchField(c.Key("recent-search"), &a.recentQuery).Height(40).Placeholder("Find by name or folder").Label("Search recent documents").AutoFocus().OnSubmit(func() {
+			ui.SearchField(c.Key("recent-search"), &a.recentQuery).Height(40).FontSize(13).Radius(8).Background(t.Surface).Border(1, t.Border).Placeholder("Find by name or folder").Label("Search recent documents").AutoFocus().OnSubmit(func() {
 				for _, path := range a.recent {
 					if strings.Contains(strings.ToLower(path), strings.ToLower(strings.TrimSpace(a.recentQuery))) {
 						a.OpenFile(path)
@@ -93,6 +93,9 @@ func (a *App) recentDialog(c *ui.Context) {
 						fill := ui.Transparent
 						if row.Hovered() || row.Focused() {
 							fill = t.SurfaceHover
+						}
+						if row.Pressed() {
+							fill = t.SurfacePressed
 						}
 						row.Background(row.AnimateColor("recent-hover", fill, ui.Animation{Duration: 100 * time.Millisecond, NonMotion: true}))
 						showRemove := row.Hovered() || row.Focused() || c.Preferences().NoHover || a.recentMissing[path] != ""
@@ -133,9 +136,9 @@ func (a *App) recentDialog(c *ui.Context) {
 				})
 			})
 			ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
-				ui.Button(c, "Clear history").Height(40).Label("Clear recent history").Disabled(len(a.recent) == 0).Tooltip("Remove this list; your files and open drafts stay intact").OnClick(a.clearRecent)
+				writingui.Button(c, "Clear history", false).Label("Clear recent history").Disabled(len(a.recent) == 0).Tooltip("Remove this list; your files and open drafts stay intact").OnClick(a.clearRecent)
 				ui.Spacer(c)
-				ui.Button(c, "Open document…").Height(40).Label("Browse for a document").Disabled(a.fileBusy).OnClick(func() { a.recentOpen = false; a.openDialog() })
+				writingui.Button(c, "Open document…", true).Label("Browse for a document").Disabled(a.fileBusy).OnClick(func() { a.recentOpen = false; a.openDialog() })
 			})
 		})
 	})

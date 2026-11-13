@@ -6,6 +6,8 @@ MyGo's `ui.NewTester` drives the application view without opening a desktop wind
 
 Test observable behavior and persistent state rather than incidental pixel coordinates. Keep stable control labels and identities.
 
+The twelve-theme gallery checks at least 4.5:1 contrast for primary and secondary text on normal, hover and pressed surfaces, plus primary-action and semantic text. Each theme must survive preference persistence and resolve the correct native light/dark appearance. At 960 × 640 and 1×/1.5×/2× scale, all gallery targets must fit and remain disjoint. Exercise keyboard entry/activation/exit, pointer cancellation, rapid panel switching and both writing modes. [Product polish verification](../development/product-polish.md) includes the full render matrix and change comparison.
+
 Custom-title-bar tests use fake window commands to verify exactly-once dispatch, maximize/restore labels, and preservation of writing state. They exercise control reachability at 1×, 1.5×, and 2× display scale in a minimum-sized window, including Focus mode. Panel tests interrupt enter/exit transitions with and without reduced motion, then check selection and continued typing. File-list tests verify consecutive keyboard navigation and Enter-to-edit behavior.
 
 Interaction tests advance the actual animation clock, reverse a sidebar mid-flight, reject input in closing navigation, and verify that typing and undo continue afterward. They exercise row/context close protection, copying a specific document path, reader-anchor navigation, and save acknowledgment expiry/precedence over stale saves. Recorded headless frames can demonstrate motion; they remain distinct from native desktop acceptance.

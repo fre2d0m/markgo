@@ -19,6 +19,7 @@ internal/storage
 - `cmd/markgo` is the thin executable entry point. It creates the application model and configures the native window.
 - `internal/app` owns workbench state, presentation, theme adaptation, document selection, and user interaction.
 - `internal/mdeditor` owns MyGo Markdown editor state, source-preserving parser analysis, outline and statistics, formatting, list continuation, and live-preview replacements.
+- `internal/writingui` shares native control feedback, fields and floating surfaces between the workbench and editable popovers; it owns no document state or I/O.
 - `internal/storage` owns UTF-8 file snapshots, guarded saving, and recursive folder enumeration.
 - `internal/preferences` atomically writes small local settings. Appearance write revisions reject older workers that finish late; queued writes are drained after the event loop exits.
 - `internal/session` stores bounded recovery checkpoints atomically. The application holds immutable source snapshots, original disk bytes and buffer versions together, serializes them on a worker, and rejects stale write requests. Recent paths and session metadata share the same transaction.

@@ -63,12 +63,3 @@ func (a *App) captionButtons(c *ui.Context) {
 		button("close-window", "window-close", "Close window", func() { a.windowCommands.Close() })
 	})
 }
-
-// Small panels move only a few pixels. They do not animate the writing page.
-func floatingPanel(panel ui.Element) ui.Element {
-	return panel.Transition(ui.ElementTransition{
-		Duration: 130 * time.Millisecond, ExitDuration: 90 * time.Millisecond,
-		Colors: true, Enter: &ui.Motion{Y: -4, Opacity: 0, Flip: true},
-		Exit: &ui.Motion{Y: -2, Opacity: 0, Flip: true},
-	})
-}
