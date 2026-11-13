@@ -29,6 +29,7 @@ var icons = map[string]*ui.SVG{
 	"refresh":         iconPath(`<path d="M19.5 10A8 8 0 1 0 19 17M19.5 4v6h-6"/>`),
 	"bold":            iconPath(`<path d="M7 4h6a4 4 0 0 1 0 8H7V4ZM7 12h7a4 4 0 0 1 0 8H7v-8Z"/>`),
 	"italic":          iconPath(`<path d="M10 4h8M6 20h8M14.5 4l-5 16"/>`),
+	"strikethrough":   iconPath(`<path d="M17 6c-1.2-1.4-2.8-2-5-2-2.8 0-5 1.5-5 4 0 1.8 1.5 2.8 3.5 3.5M8 18c1.1 1.3 2.5 2 4.6 2 2.7 0 4.6-1.4 4.6-3.6 0-1.1-.5-2-1.6-2.6M4 12h16"/>`),
 	"link":            iconPath(`<path d="m9 15 6-6M8 8l2-2a4.5 4.5 0 0 1 6.4 6.4l-1.8 1.8M16 16l-2 2a4.5 4.5 0 0 1-6.4-6.4l1.8-1.8"/>`),
 	"code":            iconPath(`<path d="m8 7-5 5 5 5m8-10 5 5-5 5M14 4l-4 16"/>`),
 	"list":            iconPath(`<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>`),

@@ -2,6 +2,7 @@ package mdeditor
 
 import (
 	"math"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -48,7 +49,12 @@ func TestTypesettingLongDocumentRetainsEditPosition(t *testing.T) {
 func checkProjection(t testing.TB, p *typesetProjection, source string) {
 	t.Helper()
 	want := projectTypesetting(source)
-	if p.source != source || p.text != want.text || !slices.Equal(p.lines, want.lines) || !slices.Equal(p.listLines, want.listLines) || !slices.Equal(p.items, want.items) || p.listNumber != want.listNumber || !slices.Equal(p.blockLines, want.blockLines) || !slices.Equal(p.codes, want.codes) || !slices.Equal(p.visible, want.visible) {
+	if p.source != source || p.text != want.text || !slices.Equal(p.lines, want.lines) || !slices.Equal(p.listLines, want.listLines) || !slices.Equal(p.items, want.items) || p.listNumber != want.listNumber || !slices.Equal(p.blockLines, want.blockLines) || !slices.Equal(p.codes, want.codes) || !slices.Equal(p.visible, want.visible) || !slices.Equal(p.inlines, want.inlines) || !reflect.DeepEqual(p.inlineLines, want.inlineLines) {
+		for i := range min(len(p.lines), len(want.lines)) {
+			if p.lines[i] != want.lines[i] {
+				t.Logf("line %d: %+v != %+v", i, p.lines[i], want.lines[i])
+			}
+		}
 		t.Fatalf("incremental projection differs from full parse for %q\n got %q\nwant %q", source, p.text, want.text)
 	}
 	for i := 0; i <= want.len(); i++ {
@@ -79,6 +85,7 @@ func TestTypesettingIncrementalProjectionContextChanges(t *testing.T) {
 		"- parent\n\t- child\n\t  continued\n\n999999999. last",
 		"> first\n> > 中文🙂\n> lazy\n>\n\n```\n```\n\nafter",
 		"  ~~~~ go extra\n  # literal\n\t中🙂\n  ~~~~~~\n\n```python\n",
+		"**bold _inside_** and ~~gone~~ `code` [中文🙂][ref]\n\n[ref]: /note\n\n> **quote**\n\n- [ ] _task_",
 	}
 	for _, source := range fixtures {
 		for _, insert := range []string{"\n", "# ", "```\n", "---\n", "<!--\n", "中文🙂", "\t", "\n\n"} {
@@ -107,6 +114,7 @@ func FuzzTypesettingIncrementalProjection(f *testing.F) {
 		"3. one\n1. two\n   - [X] child🙂\n   - [ ] \n\n999999999) last",
 		"> first\n> > 中文🙂\n> lazy\n>\n\n```\n```\n\nafter",
 		"  ~~~~ go extra\n  # literal\n\t中🙂\n  ~~~~~~\n\n```python\n",
+		"**bold _inside_** and ~~gone~~ `code` [中文🙂][ref]\n\n[ref]: /note\n\n> **quote**\n\n- [ ] _task_",
 	} {
 		f.Add(seed, []byte{0, 3, 7, 12, 9, 30, 255, 1, 11})
 	}
@@ -115,7 +123,7 @@ func FuzzTypesettingIncrementalProjection(f *testing.F) {
 			t.Skip()
 		}
 		p := projectTypesetting(source)
-		snippets := []string{"", "\n", "# ", "```\n", "---\n", "🙂", "中", "文", "\t", "<!--", "-->", "[ref]: /note", "- ", "> ", "[X] ", "[ ] ", "3. ", "1) ", "  "}
+		snippets := []string{"", "\n", "# ", "```\n", "---\n", "🙂", "中", "文", "\t", "<!--", "-->", "[ref]: /note", "- ", "> ", "[X] ", "[ ] ", "3. ", "1) ", "  ", "**", "_", "~~", "`", "[label](dest)", "](dest)"}
 		for i, action := range edits {
 			runes := []rune(source)
 			at := int(action) % (len(runes) + 1)

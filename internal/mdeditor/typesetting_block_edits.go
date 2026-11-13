@@ -56,7 +56,7 @@ func (p *typesetProjection) lineAfter(i int) int {
 // inside code extends its delimiters instead of silently ending the block.
 func (t *Typesetter) applyProjectedEdit(a, z int, text string, anchor, caret int) {
 	p := &t.projection
-	var extra []editor.Edit
+	extra := p.inlineEditPairs(a, z, text)
 	for _, code := range p.codes {
 		open, close := p.lines[code.open], typesetLine{}
 		if z > a && open.block.virtual && a == code.bodyStart {

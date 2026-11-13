@@ -34,6 +34,9 @@ Read `.agents/skills/mygo-maintenance/SKILL.md` before changing UI code. Confirm
 - Structured quotes and top-level fenced code share the same source history. Hidden fence lines must not create fake editable paragraphs; empty fences need a virtual caret without no-op source changes. Retain fence characters, info suffixes, body whitespace and line endings.
 - Literal fences typed or pasted into code extend both delimiters together. Edits across one boundary remove its surviving paired fence in the same transaction; verify multi-block, reversed-selection undo.
 - Code headers use 40 DIP targets and native vector icons. Language changes, Escape and Continue return focus to the preserved writing selection. Keep clipboard feedback local to the code header and do not animate the document.
+- Inline presentation uses parser-confirmed spans and sparse hidden source intervals. Preserve delimiter spelling, link titles/references and line endings. Selection endpoints need different marker affinity; crossing one boundary removes its surviving paired syntax in the same history step.
+- Keep inline attribute caches relative to their paragraph and invalidate changed/composing paragraphs. Do not enumerate global text runs for every span on every input. Verify cached attributes against fresh projections and benchmark a format-dense 100,000-character document.
+- Link editing must retain the writing selection and return focus after Apply, Cancel or Escape. Never open an address implicitly while editing. Reference-link changes apply only to the chosen occurrence, without rewriting its shared definition.
 
 ## Commands
 
