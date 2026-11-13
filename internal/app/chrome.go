@@ -4,6 +4,7 @@ import (
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 	"github.com/xddcode/markgo/internal/mdeditor"
+	"github.com/xddcode/markgo/internal/writingui"
 	"time"
 )
 
@@ -17,10 +18,7 @@ func (a *App) header(c *ui.Context) {
 				workspace.Background(t.Surface)
 			}
 			workspace.Children(func() {
-				brand := ui.ButtonBase(c.Key("workspace-menu")).Height(40).Padding(0, 8).Radius(7).KeepFocus().Label("Document menu").Tooltip("Document menu")
-				if brand.Hovered() {
-					brand.Background(t.SurfaceHover)
-				}
+				brand := writingui.Interactive(c, ui.ButtonBase(c.Key("workspace-menu")), false).Height(40).Padding(0, 8).KeepFocus().Label("Document menu").Tooltip("Document menu")
 				brand.Children(func() {
 					ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 						ui.Icon(c, icons["mark"]).Size(17, 17).TextColor(t.Text)
@@ -28,7 +26,9 @@ func (a *App) header(c *ui.Context) {
 						ui.Icon(c, icons["chevron"]).Size(12, 12).TextColor(t.TextMuted)
 					})
 				})
-				brand.PopoverMenuButton(a.documentMenu)
+				brand.PopoverMenuButton(a.documentMenu, ui.PopoverMenuButtonOptions{Panel: func(panel ui.Element) {
+					writingui.Surface(c, panel).Padding(8)
+				}})
 				ui.Spacer(c)
 				if iconButton(c, "sidebar", "sidebar", "Toggle file sidebar").Clicked() {
 					a.sidebar = !a.sidebar
@@ -67,8 +67,7 @@ func (a *App) header(c *ui.Context) {
 				a.reading = false
 			}
 			ui.PopoverBase(c, format, &a.formatOpen, func(panel ui.Element) {
-				floatingPanel(panel).Width(380).Padding(8).Margin(8, 0, 0).Background(t.Background).Radius(12).Border(1, t.Border.Alpha(0.7)).
-					Shadow(0, 8, 28, 0, ui.RGBA(0, 0, 0, 0.09)).Children(func() { a.editorToolbar(c, file) })
+				writingui.Surface(c, panel).Width(380).Padding(8).Margin(8, 0, 0).Children(func() { a.editorToolbar(c, file) })
 			})
 			readIcon, readLabel := "read", "Read document"
 			if a.reading {
@@ -91,43 +90,47 @@ func (a *App) header(c *ui.Context) {
 				a.appearanceOpen = !a.appearanceOpen
 				a.formatOpen = false
 			}
-			a.appearancePopover(c, appearance)
+			var writingFocus *ui.Handle
+			if !a.reading {
+				writingFocus = &file.Focus
+			}
+			a.appearancePopover(c, appearance, writingFocus)
 		})
 		a.captionButtons(c)
 	})
 }
 
 func (a *App) documentMenu(m *ui.Menu) {
-	if m.Item("New document").Icon(menuIcons["plus"]).Shortcut(ui.Cmd, ui.KeyN).Disabled(a.fileBusy).Chosen() {
+	if writingui.MenuItem(m, "New document").Icon(menuIcons["plus"]).Shortcut(ui.Cmd, ui.KeyN).Disabled(a.fileBusy).Chosen() {
 		a.newDocument()
 	}
-	if m.Item("Open document…").Icon(menuIcons["file"]).Shortcut(ui.Cmd, ui.KeyO).Disabled(a.fileBusy).Chosen() {
+	if writingui.MenuItem(m, "Open document…").Icon(menuIcons["file"]).Shortcut(ui.Cmd, ui.KeyO).Disabled(a.fileBusy).Chosen() {
 		a.openDialog()
 	}
-	if m.Item("Recent documents…").Chosen() {
+	if writingui.MenuItem(m, "Recent documents…").Chosen() {
 		a.recentOpen = true
 		a.recentQuery = ""
 	}
-	if m.Item("Open folder…").Icon(menuIcons["folder"]).Disabled(a.fileBusy).Chosen() {
+	if writingui.MenuItem(m, "Open folder…").Icon(menuIcons["folder"]).Disabled(a.fileBusy).Chosen() {
 		a.openFolderDialog()
 	}
 	m.Separator()
-	if m.Item("Save").Icon(menuIcons["save"]).Shortcut(ui.Cmd, ui.KeyS).Disabled(a.fileBusy).Chosen() {
+	if writingui.MenuItem(m, "Save").Icon(menuIcons["save"]).Shortcut(ui.Cmd, ui.KeyS).Disabled(a.fileBusy).Chosen() {
 		a.saveDocument(false)
 	}
-	if m.Item("Save as…").Shortcut(ui.Cmd|ui.Shift, ui.KeyS).Disabled(a.fileBusy).Chosen() {
+	if writingui.MenuItem(m, "Save as…").Shortcut(ui.Cmd|ui.Shift, ui.KeyS).Disabled(a.fileBusy).Chosen() {
 		a.saveDocument(true)
 	}
-	if m.Item("Close document").Shortcut(ui.Cmd, ui.KeyW).Disabled(a.fileBusy).Chosen() {
+	if writingui.MenuItem(m, "Close document").Shortcut(ui.Cmd, ui.KeyW).Disabled(a.fileBusy).Chosen() {
 		a.closeDocument(a.current())
 	}
 	m.Separator()
-	if m.Item("Show Markdown source").Checked(!a.preview).Chosen() {
+	if writingui.MenuItem(m, "Show Markdown source").Checked(!a.preview).Chosen() {
 		a.preview = !a.preview
 		a.reading = false
 	}
 	m.Separator()
-	if m.Item("Writing guide").Chosen() {
+	if writingui.MenuItem(m, "Writing guide").Chosen() {
 		a.openGuides()
 	}
 }
@@ -140,7 +143,7 @@ func (a *App) fileSidebar(c *ui.Context) {
 			x := tabs.AnimateTo("indicator", float32(a.sideView)*64+24, ui.Animation{Duration: 160 * time.Millisecond, Ease: ui.EaseOut})
 			tabs.Children(func() {
 				for index, label := range []string{"Files", "Outline"} {
-					button := ui.ButtonBase(c.Key(label)).Size(64, 40).Center().Radius(6).Label(label)
+					button := writingui.Interactive(c, ui.ButtonBase(c.Key(label)), false).Size(64, 40).Center().Label(label)
 					color := t.TextMuted
 					if button.Hovered() {
 						button.Background(t.SurfaceHover)
@@ -177,10 +180,10 @@ func (a *App) fileSidebar(c *ui.Context) {
 func (a *App) documentList(c *ui.Context) {
 	t := c.Theme()
 	services := c.Services()
-	ui.SearchField(c.Key("filter"), &a.query).Height(40).Background(t.Background).Border(0, ui.Transparent).Radius(7).Placeholder("Find a document").Label("Filter documents")
+	ui.SearchField(c.Key("filter"), &a.query).Height(40).Background(t.Background).Border(1, t.Border).Radius(8).FontSize(13).Placeholder("Find a document").Label("Filter documents")
 	ui.Row(c).FillWidth().Padding(2, 10).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, "Open documents").FontSize(10).TextColor(t.TextMuted).Grow(1)
-		ui.Textf(c, "%d", len(a.files)).FontSize(10).FontFeatures("tnum").TextColor(t.TextMuted)
+		ui.Text(c, "Open documents").FontSize(11).FontWeight(500).TextColor(t.TextMuted).Grow(1)
+		ui.Textf(c, "%d", len(a.files)).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted)
 	})
 	files := a.visibleFiles()
 	// Preserve the Sidebar's keyboard model with a quieter selection color.
@@ -200,7 +203,7 @@ func (a *App) documentList(c *ui.Context) {
 				if file.Modified() {
 					label += "  •"
 				}
-				row := ui.SidebarItem(c.Key(file.ID), file.ID, nil, label).Height(40).PaddingEnd(0).Radius(6).FontSize(12).Label("Document " + file.Name)
+				row := ui.SidebarItem(c.Key(file.ID), file.ID, nil, label).Height(40).PaddingEnd(0).Radius(8).FontSize(13).Label("Document " + file.Name)
 				path := file.Path
 				if path == "" {
 					path = file.Name
@@ -227,21 +230,18 @@ func (a *App) documentList(c *ui.Context) {
 	})
 	if a.folder != nil {
 		ui.Row(c).FillWidth().PaddingStart(10).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, a.folder.Name).FontSize(10).FontWeight(600).TextColor(t.TextMuted).SingleLine().Ellipsis("…").Grow(1)
+			ui.Text(c, a.folder.Name).FontSize(11).FontWeight(500).TextColor(t.TextMuted).SingleLine().Ellipsis("…").Grow(1)
 			if iconButton(c, "refresh", "refresh", "Refresh folder").Disabled(a.fileBusy).Clicked() {
 				a.refreshFolder()
 			}
 		})
 		ui.Scroll(c).Grow(1).MinHeight(0).Children(func() { ui.Tree(c, func() { a.folderItems(c, a.folder.Children) }).Label("Folder contents") })
 	}
-	open := ui.ButtonBase(c.Key("open-folder")).FillWidth().Height(40).Padding(0, 10).Radius(7).Label("Open folder").Disabled(a.fileBusy)
-	if open.Hovered() {
-		open.Background(t.SurfaceHover)
-	}
+	open := writingui.Interactive(c, ui.ButtonBase(c.Key("open-folder")), false).FillWidth().Height(40).Padding(0, 10).Label("Open folder").Disabled(a.fileBusy)
 	open.Children(func() {
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-			ui.Icon(c, icons["folder"]).Size(17, 17).TextColor(t.TextMuted)
-			ui.Text(c, "Open a folder").FontSize(12).TextColor(t.TextMuted)
+			ui.Icon(c, icons["folder"]).Size(18, 18)
+			ui.Text(c, "Open a folder").FontSize(13)
 		})
 	})
 	if open.Clicked() {
@@ -250,14 +250,14 @@ func (a *App) documentList(c *ui.Context) {
 }
 
 func (a *App) fileMenu(services ui.Services, m *ui.Menu, file *mdeditor.File) {
-	if m.Item("Save document").Disabled(a.fileBusy).Chosen() {
+	if writingui.MenuItem(m, "Save document").Disabled(a.fileBusy).Chosen() {
 		a.saveFile(file, false, nil)
 	}
-	if m.Item("Copy file path").Disabled(file.Path == "").Chosen() {
+	if writingui.MenuItem(m, "Copy file path").Disabled(file.Path == "").Chosen() {
 		services.WriteClipboard(file.Path)
 	}
 	m.Separator()
-	if m.Item("Close document").Disabled(a.fileBusy).Chosen() {
+	if writingui.MenuItem(m, "Close document").Disabled(a.fileBusy).Chosen() {
 		a.closeDocument(file)
 	}
 }

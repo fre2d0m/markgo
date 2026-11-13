@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/egoist/mygo/ui"
 	"github.com/xddcode/markgo/internal/mdeditor"
+	"github.com/xddcode/markgo/internal/writingui"
 )
 
 func (a *App) format(file *mdeditor.File, action func() bool) {
@@ -15,17 +16,10 @@ func (a *App) editorToolbar(c *ui.Context, file *mdeditor.File) {
 	t := c.Theme()
 	st := file.State
 	button := func(id, text, label string, action func() bool) {
-		item := ui.ButtonBase(c.Key(id)).Size(40, 40).Center().
-			Radius(6).KeepFocus().Label(label).Tooltip(label)
-		if item.Hovered() {
-			item.Background(t.SurfaceHover)
-		}
-		if item.Pressed() {
-			item.Background(t.SurfacePressed)
-		}
+		item := writingui.Interactive(c, ui.ButtonBase(c.Key(id)), false).Size(40, 40).Center().KeepFocus().Label(label).Tooltip(label)
 		item.Children(func() {
 			if icon := icons[id]; icon != nil {
-				ui.Icon(c, icon).Size(17, 17).TextColor(t.Text)
+				ui.Icon(c, icon).Size(18, 18).TextColor(t.Text)
 			} else {
 				ui.Text(c, text).FontSize(12).FontWeight(500).TextColor(t.Text)
 			}

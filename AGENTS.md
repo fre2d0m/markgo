@@ -27,6 +27,8 @@ Read `.agents/skills/mygo-maintenance/SKILL.md` before changing UI code. Confirm
 - Give stateful and repeated controls stable identities with `c.Key`.
 - Use `Window.Update` to publish background results. Never block the UI thread or start untracked work while building a view.
 - Prefer MyGo widgets and base widgets so keyboard, focus, input methods, and accessibility keep working.
+- Shared control feedback, fields and floating surfaces live in `internal/writingui`; keep rich-text child controls' input/focus policy at their call sites. Theme IDs come from the palette catalog, not hardcoded enum lists or positions.
+- Verify every theme's normal, hover and pressed text contrast, preference round trip and OS light/dark choice. Appearance controls must fit at 960 × 640 and retain keyboard reachability, cancellation, source, selection, scroll and undo.
 - Use `ui.NewTester` for behavior tests without opening a window.
 - Typesetting projection changes must retain untouched source and paragraph layouts; compare incremental edits against a fresh parse, including distant fence/front-matter effects and Unicode offsets. Benchmark fixed edit/undo workloads separately from native input latency.
 - Structured lists come from parser-confirmed items. Preserve original markers and written numbers; display semantic decimal numbering at every depth. Prefix/indentation changes, task toggles and their necessary Markdown separators belong to source history, never a rich-text serializer.
@@ -57,6 +59,7 @@ go tool mygo build -skip-dmg ./cmd/markgo-preview
 - `cmd/markgo-preview`: isolated, sample-only native typesetting executable. Never attach real file, recovery or preference stores to it; its state is intentionally in memory.
 - `internal/app`: workbench state, views, themes, and UI behavior tests.
 - `internal/mdeditor`: Markdown document editor state and live-preview replacements.
+- `internal/writingui`: shared native control styling, field validation states and floating-surface motion; no document state.
 - `internal/storage`: UTF-8 file snapshots, guarded saving, and folder enumeration.
 - `internal/preferences`: bounded preference loading and ordered atomic setting writes.
 - `internal/session`: bounded recovery checkpoints and session metadata; `internal/app` coordinates restoration and UI feedback.

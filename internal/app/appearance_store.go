@@ -34,9 +34,7 @@ func (a *App) loadAppearance(store *preferences.Store) error {
 }
 
 func normalizeAppearance(p appearance) appearance {
-	switch p.Theme {
-	case "system", "paper", "warm", "graphite":
-	default:
+	if _, known := knownPalette(p.Theme); !known && p.Theme != "system" {
 		p.Theme = "system"
 	}
 	if p.FontSize < 14 || p.FontSize > 24 {
@@ -80,12 +78,11 @@ func (a *App) WaitForPreferences() { a.preferenceWorkers.Wait() }
 // ThemeSource also applies the chosen appearance to native window chrome and
 // dialogs. The palette itself remains owned by our native-drawn view.
 func (a *App) ThemeSource() mygo.ThemeSource {
-	switch a.appearance.Theme {
-	case "paper", "warm":
+	if p, known := knownPalette(a.appearance.Theme); known {
+		if p.Dark {
+			return mygo.ThemeDark
+		}
 		return mygo.ThemeLight
-	case "graphite":
-		return mygo.ThemeDark
-	default:
-		return mygo.ThemeSystem
 	}
+	return mygo.ThemeSystem
 }

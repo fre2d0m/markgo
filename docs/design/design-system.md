@@ -12,7 +12,7 @@ A single 48 DIP self-drawn title bar contains a small document-menu wordmark, si
 
 The native title bar and caption buttons are hidden with MyGo's `TitleBarHidden` and `HideWindowButtons`. The OS frame remains responsible for resize edges, rounded corners, and shadows; do not switch to a borderless `Frameless` window. Blank title-bar space drags the window and supports MyGo's native double-click behavior. The custom maximize target registers with `MaximizeButton` for Windows Snap integration. The close action calls `Window.Close`, preserving the existing unsaved-document guard. All three controls remain available in Focus mode.
 
-The wordmark is 13 DIP with a 17 DIP symbol. The document name truncates before the writing tools and window controls; its tooltip exposes the path or full unsaved name. Files/Outline uses a short underline, and file selection uses a soft neutral surface. Open a folder stays at the bottom of the sidebar. Repeated file icons are omitted to give filenames room.
+The wordmark is 13 DIP with a 17 DIP symbol. The document name truncates before the writing tools and window controls; its tooltip exposes the path or full unsaved name. Files/Outline uses a short underline, and file selection uses a soft neutral surface. Document and outline rows use 13 DIP text; secondary rail labels use at least 11 DIP. Open a folder stays at the bottom of the sidebar. Repeated file icons are omitted to give filenames room. Footer counts use tabular figures and reserved widths to avoid shifting with each new digit.
 
 The centered page defaults to 720 DIP maximum width, 18 DIP system text, and 1.85 line height. The writing area has 48 DIP horizontal and 38 DIP vertical breathing room. The editor has no line-number gutter or active-line background. Writers can choose 14–24 DIP text, system or serif type, and 640/720/840 DIP page widths. At the 960 × 640 minimum window, the page shrinks to fit.
 
@@ -20,17 +20,24 @@ Read mode uses a 1.9× first heading, 1.35× second heading, and 1.12× third he
 
 ## Theme tokens
 
-| Token | Paper | Warm paper | Graphite |
-| --- | --- | --- | --- |
-| Page | #ffffff | #fbf8f2 | #191b20 |
-| Sidebar | #f7f8fa | #f5f1e9 | #15171b |
-| Hover | #eef0f3 | #eee8dd | #252830 |
-| Pressed | #e2e5eb | #e4dccd | #303540 |
-| Border | #e7e9ee | #e8e1d5 | #2c3038 |
-| Ink | #252932 | #38342e | #e9ecf1 |
-| Muted ink | #69717d | #736b60 | #a0a6b1 |
+| Theme | Page | Sidebar | Ink | Secondary ink | Accent |
+| --- | --- | --- | --- | --- | --- |
+| Paper · 白纸 | #ffffff | #f7f8fa | #252932 | #5d6571 | #414b5a |
+| Warm paper · 暖纸 | #fbf8f2 | #f3eee5 | #38342e | #675e52 | #77603f |
+| Sakura · 樱花粉 | #fff8fa | #f7edf1 | #42343c | #715460 | #965471 |
+| Sage · 鼠尾草 | #f7faf6 | #edf2eb | #303c32 | #536553 | #526e50 |
+| Mist · 雾蓝 | #f6f9fc | #edf2f7 | #2d3948 | #536274 | #506e91 |
+| Lavender · 薰衣草 | #faf8fd | #f1edf7 | #3c3547 | #665771 | #79628e |
+| Sand · 沙丘 | #faf7ef | #f1edde | #3e392b | #625a42 | #796638 |
+| Pearl · 珍珠灰 | #f6f7f7 | #edefef | #323b3c | #556163 | #536e70 |
+| Graphite · 石墨 | #191b20 | #15171b | #e9ecf1 | #a6adba | #bcc6d7 |
+| Midnight · 午夜蓝 | #18212c | #141b25 | #e4ecf5 | #a4b5ca | #a8c3e6 |
+| Pine · 松林 | #1b2521 | #161f1b | #e4eee6 | #a7baab | #afcbb1 |
+| Plum · 暮紫 | #26202b | #201a25 | #eee6f2 | #beabc8 | #cdb2da |
 
-The accent is ink; selected text uses ink at 14% opacity. Semantic warnings remain recognizable and always include text. The system setting chooses Paper for light appearance and Graphite for dark appearance. Explicit themes ignore system changes.
+`internal/app/palettes.go` also specifies each palette's hover, pressed and border colors. Primary and secondary ink maintain at least 4.5:1 contrast on page, rail, hover and pressed surfaces. The accent is a restrained hue from that palette, reserved for primary actions, checks and keyboard focus. Selected text uses accent at 20% opacity; body text and syntax stay in neutral ink. Semantic warnings always include text. The system setting chooses Paper for light appearance and Graphite for dark appearance; explicit themes ignore system changes. Persist theme IDs, never catalog positions. Native dialogs use the chosen theme's light/dark appearance.
+
+The 408 DIP Appearance panel uses a four-column gallery with 60 DIP cards: eight light themes above four dark themes. Each card shows its own paper and ink, with both a check and border for selection. Typeface and page-width segments sit on a recessed surface (10 DIP outer radius, 2 DIP padding, 8 DIP inner radius). All choices and typography controls fit the minimum window without scrolling. Opening the panel transfers keyboard focus into its controls without changing the writing selection. Tab traverses controls; Enter/Space activates a choice; Close or Escape returns to the writing caret.
 
 The Appearance panel applies changes immediately to the whole client, including native-drawn menus, the editor, and reading view. Preferences are written atomically to the operating system's user configuration directory under MarkGo/appearance.json. No document contains appearance metadata. MARKGO_EPHEMERAL=1 bypasses loading and saving preferences.
 
@@ -38,9 +45,13 @@ The Appearance panel applies changes immediately to the whole client, including 
 
 The square application icon in resources/icon.png is configured in mygo.json and embedded for Window.SetIcon in both development and packaged builds. Keep at least 1024 × 1024 pixels so the same source can serve packaging and high-density displays. The interface icons in internal/app/icons.go are original vector drawings. The 24-unit control icons share 1.65-unit strokes, rounded joins, and rounded terminals; no emoji or font glyphs stand in for controls. Heading labels H1/H2 and textual search options retain their familiar notation.
 
-Icon actions, formatting tools, and find inputs/buttons have 40 DIP hit targets. Window controls use 44 × 48 DIP targets; their glyphs are deliberately smaller. Hover and pressed states use the shared palette; icon backgrounds transition over 100 ms and writing-action buttons press to 0.96 scale. Appearance, Formatting, and Read/Edit indicate their active state. The window close button uses a red background only while hovered or pressed. Controls retain meaningful labels, tooltips, keyboard focus, and native widget behavior.
+Icon actions, formatting tools, and find inputs/buttons have 40 DIP hit targets. Workbench glyphs are 18 DIP inside those targets. Window controls use 44 × 48 DIP targets; their glyphs are deliberately smaller. Hover and pressed states use the shared palette; control backgrounds transition over 100 ms and buttons press to 0.96 scale over 90 ms. Appearance, Formatting, and Read/Edit indicate their active state. The window close button uses a red background only while hovered or pressed. Controls retain meaningful labels, tooltips, keyboard focus, and native widget behavior. Pressing a theme and dragging outside it cancels the choice.
 
-Use small, consistent radii: 6–8 DIP for controls and 12–14 DIP for floating panels. Sidebars are separated by surface tone. Subtle shadows are reserved for floating controls; the page has no enclosing card. Appearance and Formatting enter over 130 ms with a 4 DIP movement and fade, and leave over 90 ms with a 2 DIP movement. Transitions can be interrupted; MyGo's reduced-motion preference suppresses movement. Never animate the writing page.
+`internal/writingui` supplies the shared 8 DIP control radius, 16 DIP floating-surface radius, field and button states. Sidebars are separated by surface tone. Floating surfaces use a thin theme-colored edge and a restrained shadow, with more shadow opacity in dark themes. The page has no enclosing card. Panels enter over 130 ms with a 4 DIP movement and fade, and leave over 90 ms with a 2 DIP movement. Transitions can be interrupted; MyGo's reduced-motion preference suppresses movement. Never animate the writing page.
+
+Application menu rows use 40 DIP targets while retaining MyGo's menu keyboard model and shortcut column. The document menu shares the panel surface and uses 8 DIP inner padding. Platform-provided text-editing context actions retain their toolkit layout.
+
+Link and code-language panels share field dimensions, a 15 DIP heading and an emphasized Apply action. Validation changes the affected field's border and gives a textual alert below it; the document stays intact. A reserved hint area reduces movement when a short error replaces a hint. Recent documents use 24 DIP panel padding and 16 DIP section gaps; exit actions visually separate cancellation, destructive discarding and the primary safe action.
 
 ## Interaction contracts
 
@@ -72,7 +83,7 @@ Use small, consistent radii: 6–8 DIP for controls and 12–14 DIP for floating
 
 These are native headless renders, not desktop acceptance screenshots.
 
-The interaction recording uses the actual application view and animation clock. It covers tab changes, interrupted sidebar motion, appearance and focus mode. It does not establish native GPU frame timing or IME behavior.
+The interaction recording uses the actual Writing Preview view and animation clock. It covers Appearance, theme hover/press/selection, dismissal and the formatting panel. It does not establish native GPU frame timing or IME behavior.
 
 ![Writing flow and micro-interactions](images/interaction.gif)
 
@@ -81,6 +92,10 @@ The interaction recording uses the actual application view and animation clock. 
 ![Graphite editing view](images/graphite-editing.png)
 
 ![Appearance at the minimum window width](images/appearance.png)
+
+![Sakura writing environment](images/polish/sakura-writing.png)
+
+![Twelve restrained writing themes](images/polish/themes.png)
 
 ![Warm paper formatting at 150 percent display scale](images/warm-formatting.png)
 
@@ -102,4 +117,4 @@ The interaction recording uses the actual application view and animation clock. 
 
 ## Verification
 
-Behavior tests cover theme and typography changes, system-following behavior, source/selection/scroll preservation, undo after dismissing a panel, preference round trips, long document names, caption actions, interrupted panels, reduced motion, and control bounds at the minimum size and 1×/1.5×/2× scale. Inspect both reading and editing, all three themes, open popovers, find/replace, and focus mode. Native font, IME, window, and screen-reader verification remains a separate platform check.
+Behavior tests cover theme and typography changes, system-following behavior, source/selection/scroll preservation, undo after dismissing a panel, all twelve preference round trips, keyboard theme selection, pointer cancellation, long document names, caption actions, interrupted panels, reduced motion, and non-overlapping control bounds at the minimum size and 1×/1.5×/2× scale. Inspect both reading and editing, all twelve themes, open popovers, find/replace, and focus mode. Native font, IME, window, and screen-reader verification remains a separate platform check. See [product polish verification](../development/product-polish.md) for the change comparison and evidence scope.

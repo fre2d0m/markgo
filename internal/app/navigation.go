@@ -83,13 +83,17 @@ func (a *App) outlineSidebar(c *ui.Context, file *mdeditor.File) {
 				if item.Hovered() || index == active {
 					background = t.SurfaceHover
 				}
+				if item.Pressed() {
+					background = t.SurfacePressed
+				}
+				item.Tooltip(heading.Title)
 				item.Background(item.AnimateColor("active-section", background, ui.Animation{Duration: 120 * time.Millisecond, NonMotion: true}))
 				item.Children(func() {
 					weight := 400
 					if index == active {
 						weight = 500
 					}
-					ui.Text(c, heading.Title).FillWidth().FontSize(12).FontWeight(weight).SingleLine().Ellipsis("…").TextColor(t.Text)
+					ui.Text(c, heading.Title).FillWidth().FontSize(13).FontWeight(weight).SingleLine().Ellipsis("…").TextColor(t.Text)
 				})
 				if item.Clicked() {
 					if a.reading {

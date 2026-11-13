@@ -1,10 +1,9 @@
 package app
 
 import (
-	"time"
-
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+	"github.com/xddcode/markgo/internal/writingui"
 )
 
 // Original 24-unit drawings share one optical weight and round terminals.
@@ -69,25 +68,8 @@ func iconButton(c *ui.Context, key, icon, label string) ui.Element {
 }
 
 func stateIconButton(c *ui.Context, key, icon, label string, active bool) ui.Element {
-	t := c.Theme()
-	b := ui.ButtonBase(c.Key(key)).Size(40, 40).Radius(8).Center().KeepFocus().
+	b := writingui.Interactive(c, ui.ButtonBase(c.Key(key)), active).Size(40, 40).Center().KeepFocus().
 		Label(label).Tooltip(label).Cursor(ui.CursorPointer)
-	color, background := t.TextMuted, ui.Transparent
-	if active {
-		color, background = t.Text, t.SurfaceHover
-	}
-	if b.Hovered() {
-		color, background = t.Text, t.SurfaceHover
-	}
-	if b.Pressed() {
-		background = t.SurfacePressed
-	}
-	scale := float32(1)
-	if b.Pressed() {
-		scale = 0.96
-	}
-	b.AnimatePose(ui.Pose{Scale: scale}, ui.Animation{Duration: 100 * time.Millisecond})
-	b.Background(b.AnimateColor("background", background, ui.Animation{Duration: 100 * time.Millisecond, NonMotion: true}))
-	b.Children(func() { ui.Icon(c, icons[icon]).Size(17, 17).TextColor(color) })
+	b.Children(func() { ui.Icon(c, icons[icon]).Size(18, 18) })
 	return b
 }

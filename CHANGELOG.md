@@ -6,6 +6,8 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- Sakura, Sage, Mist, Lavender, Sand, Pearl, Midnight, Pine and Plum writing themes, alongside Paper, Warm paper and Graphite.
+- A compact twelve-theme gallery with a selected check, keyboard navigation and an explicit close action.
 - Local recovery checkpoints for named and untitled drafts, previous-session restoration, and a searchable recent-document history.
 - Self-drawn exit choices to keep drafts, save all, discard or cancel; final checkpoints complete before closing, with visible failure handling.
 - Recovery review and save-copy guidance for changed or unavailable originals; current-version backup status and safe history removal.
@@ -27,6 +29,9 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Changed
 
+- Unified native buttons, inputs and floating panels; refined sidebar type, segmented view controls, dialog spacing and stable footer metrics.
+- Added restrained hover/press feedback throughout formatting, appearance, search and dialog actions, respecting reduced motion.
+- Tuned primary and secondary text contrast across all twelve palettes, including hovered and pressed surfaces.
 - Replaced the application icon and configured its high-resolution packaging asset.
 - Combined the native title bar and application header into one 48 DIP self-drawn bar; retained OS resize edges and wired custom window controls through the normal close protection and maximize state.
 - Refined Paper, Warm paper, and Graphite; reduced wordmark and icon weight, softened sidebar selection, and added active-tool states and interruptible, reduced-motion-aware panel transitions.
@@ -39,6 +44,8 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Fixed
 
+- Keyboard theme selection and dismissal now return to the preserved writing caret in both editing modes.
+- Link validation marks the corresponding text or address field and leaves the document unchanged until Apply succeeds.
 - Apply the application icon to native windows and taskbar buttons in development and packaged builds.
 - Outline navigation in reading mode now addresses the reading view; editing mode emphasizes the caret's current section.
 - Switching a theme no longer caches the previous theme's editor colors under the new choice.

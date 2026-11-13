@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/xddcode/markgo/internal/writingui"
 )
 
 type typesetBlockUI struct {
@@ -25,23 +26,9 @@ var codeIcons = map[string]*ui.SVG{
 }
 
 func codeButton(c *ui.Context, label string) ui.Element {
-	th := c.Theme()
-	b := ui.ButtonBase(c).Height(40).MinWidth(40).KeepFocus().Radius(6).Label(label)
+	b := writingui.Interactive(c, ui.ButtonBase(c), false).Height(40).MinWidth(40).KeepFocus().Label(label)
 	b.HandleInput(func(ui.InputEvent) bool { return false })
-	fill := ui.Transparent
-	if b.Hovered() {
-		fill = th.SurfaceHover
-	}
-	if b.Pressed() {
-		fill = th.SurfacePressed
-	}
-	b.Background(b.AnimateColor("hover", fill, ui.Animation{Duration: 100 * time.Millisecond, NonMotion: true}))
-	scale := float32(1)
-	if b.Pressed() {
-		scale = 0.96
-	}
-	scale = b.AnimateTo("press", scale, ui.Animation{Duration: 90 * time.Millisecond, Ease: ui.EaseOut})
-	return b.Scale(scale, scale)
+	return b
 }
 
 func (t *Typesetter) codeHeaders(c *ui.Context, view ui.Element) {
@@ -125,21 +112,20 @@ func (t *Typesetter) languagePopover(c *ui.Context, anchor ui.Element) {
 		}
 	}
 	ui.PopoverBase(c, anchor, &u.languageOpen, func(panel ui.Element) {
-		panel.Transition(ui.ElementTransition{Duration: 130 * time.Millisecond, ExitDuration: 90 * time.Millisecond, Colors: true, Enter: &ui.Motion{Y: -4, Opacity: 0, Flip: true}, Exit: &ui.Motion{Y: -2, Opacity: 0, Flip: true}})
-		panel.Width(260).Padding(14).Gap(10).Margin(6, 0, 0).Radius(12).Background(th.Background).Border(1, th.Border.Alpha(0.7)).Shadow(0, 8, 28, 0, ui.RGBA(0, 0, 0, 0.09)).Children(func() {
-			ui.Text(c, "Code language").FontSize(13).FontWeight(500)
-			ui.TextInputBase(c.Key("language-name"), &u.languageDraft).FillWidth().Height(40).Padding(6, 9).Background(th.Surface).Border(1, th.Border).Radius(6).FontSize(13).Label("Language name").Placeholder("Plain text").AutoFocus().OnSubmit(apply).OnChange(func() { u.languageError = "" })
+		writingui.Surface(c, panel).Width(288).Padding(16).Gap(12).Margin(8, 0, 0).Children(func() {
+			ui.Text(c, "Code language").FontSize(15).FontWeight(600)
+			writingui.Field(c, ui.TextInputBase(c.Key("language-name"), &u.languageDraft), u.languageError != "").FillWidth().Label("Language name").Placeholder("Plain text").AutoFocus().OnSubmit(apply).OnChange(func() { u.languageError = "" })
 			if u.languageError != "" {
-				ui.Text(c, u.languageError).FillWidth().FontSize(12).TextColor(th.TextMuted).LineHeight(1.5).Role(ui.RoleAlert)
+				ui.Text(c, u.languageError).FillWidth().MinHeight(36).FontSize(12).TextColor(th.Danger).LineHeight(1.5).Role(ui.RoleAlert)
 			} else {
-				ui.Text(c, "For example: go, python, javascript.\nLeave empty for plain text.").FillWidth().FontSize(12).TextColor(th.TextMuted).LineHeight(1.5)
+				ui.Text(c, "For example: go, python, javascript.\nLeave empty for plain text.").FillWidth().MinHeight(36).FontSize(12).TextColor(th.TextMuted).LineHeight(1.5)
 			}
 			ui.Row(c).FillWidth().Gap(6).Justify(ui.End).Children(func() {
 				cancel := codeButton(c.Key("cancel"), "Cancel language change").Padding(0, 12).Center()
 				cancel.Children(func() { ui.Text(c, "Cancel").FontSize(12).TextColor(th.TextMuted) })
 				cancel.OnClick(func() { u.languageOpen = false; t.input.handle.Focus(c) })
-				button := codeButton(c.Key("apply"), "Apply code language").Padding(0, 14).Background(th.SurfaceHover).Center()
-				button.Children(func() { ui.Text(c, "Apply").FontSize(12).FontWeight(500) })
+				button := writingui.Primary(c, codeButton(c.Key("apply"), "Apply code language")).Padding(0, 16).Center()
+				button.Children(func() { ui.Text(c, "Apply").FontSize(13).FontWeight(500) })
 				button.OnClick(apply)
 			})
 		})

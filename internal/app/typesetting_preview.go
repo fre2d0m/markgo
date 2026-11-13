@@ -8,6 +8,7 @@ import (
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 	"github.com/xddcode/markgo/internal/mdeditor"
+	"github.com/xddcode/markgo/internal/writingui"
 )
 
 // TypesettingPreview is an explicitly launched sample workspace. It has no
@@ -104,6 +105,7 @@ func (p *TypesettingPreview) View(c *ui.Context) {
 	if (a.appearanceOpen || p.formatOpen) && c.Shortcut(0, ui.KeyEscape) {
 		a.appearanceOpen = false
 		p.formatOpen = false
+		page.file.Focus.Focus(c)
 	}
 	root := ui.Column(c.Key("writing-preview")).Fill().Background(t.Background)
 	target := float32(0)
@@ -166,22 +168,13 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 			}
 		})
 		ui.Text(c, strings.TrimSuffix(page.file.Name, ".md")).FontSize(12).TextColor(t.TextMuted).Grow(1).MinWidth(0).SingleLine().Ellipsis("…").MarginX(20)
-		ui.Row(c.Key("view-modes")).Height(40).Gap(2).AlignItems(ui.Center).Children(func() {
+		ui.Row(c.Key("view-modes")).Height(44).Shrink(0).Padding(2).Radius(10).Background(t.Surface).Gap(2).AlignItems(ui.Center).Children(func() {
 			for _, mode := range []struct {
 				label  string
 				source bool
 			}{{"Typeset", false}, {"Source", true}} {
-				b := ui.ButtonBase(c.Key(mode.label)).Size(68, 40).KeepFocus().Center().Radius(7).Label(mode.label + " mode").Tooltip("Switch view · Cmd/Ctrl+Shift+M")
-				fill, ink := ui.Transparent, t.TextMuted
-				if p.sourceMode == mode.source {
-					fill, ink = t.SurfaceHover, t.Text
-				}
-				if b.Hovered() {
-					fill = t.SurfaceHover
-					ink = t.Text
-				}
-				b.Background(b.AnimateColor("fill", fill, ui.Animation{Duration: 110 * time.Millisecond, NonMotion: true}))
-				b.Children(func() { ui.Text(c, mode.label).FontSize(12).FontWeight(500).TextColor(ink) })
+				b := appearanceSegment(c.Key(mode.label), mode.label+" mode", p.sourceMode == mode.source).Size(68, 40).Tooltip("Switch view · Cmd/Ctrl+Shift+M")
+				b.Children(func() { ui.Text(c, mode.label).FontSize(12).FontWeight(500) })
 				if b.Clicked() {
 					p.setMode(mode.source)
 					page.file.Focus.Focus(c)
@@ -194,8 +187,8 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 			a.appearanceOpen = false
 		}
 		ui.PopoverBase(c, format, &p.formatOpen, func(panel ui.Element) {
-			floatingPanel(panel).Width(220).Padding(6).Gap(2).Margin(8, 0, 0).Radius(12).Background(t.Background).Border(1, t.Border.Alpha(0.7)).Shadow(0, 8, 28, 0, ui.RGBA(0, 0, 0, 0.09)).Children(func() {
-				ui.Row(c.Key("inline-formats")).FillWidth().Gap(2).Children(func() {
+			writingui.Surface(c, panel).Width(248).Padding(8).Gap(2).Margin(8, 0, 0).Children(func() {
+				ui.Row(c.Key("inline-formats")).FillWidth().Justify(ui.SpaceBetween).Gap(2).Children(func() {
 					for _, action := range []struct {
 						label, icon, hint string
 						kind              mdeditor.InlineKind
@@ -221,10 +214,7 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 				})
 				ui.Box(c).Height(1).FillWidth().Margin(4, 6).Background(t.Border)
 				for level, label := range []string{"Paragraph", "Heading 1", "Heading 2", "Heading 3"} {
-					b := ui.ButtonBase(c.Key(label)).FillWidth().Height(44).Padding(0, 12).Radius(6).KeepFocus().Label(label)
-					if b.Hovered() {
-						b.Background(t.SurfaceHover)
-					}
+					b := writingui.Interactive(c, ui.ButtonBase(c.Key(label)), false).FillWidth().Height(44).Padding(0, 12).KeepFocus().Label(label).TextColor(t.Text)
 					b.Children(func() {
 						ui.Row(c).Fill().AlignItems(ui.Center).Children(func() {
 							ui.Text(c, label).FontSize(13).Grow(1)
@@ -249,10 +239,7 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 					{"Numbered list", "numbered-list", "⇧7", mdeditor.NumberedList},
 					{"Task list", "task-list", "⇧9", mdeditor.TaskList},
 				} {
-					b := ui.ButtonBase(c.Key(action.label)).FillWidth().Height(44).Padding(0, 12).Radius(6).KeepFocus().Label(action.label).Tooltip("Cmd/Ctrl+" + action.hint)
-					if b.Hovered() {
-						b.Background(t.SurfaceHover)
-					}
+					b := writingui.Interactive(c, ui.ButtonBase(c.Key(action.label)), false).FillWidth().Height(44).Padding(0, 12).KeepFocus().Label(action.label).Tooltip("Cmd/Ctrl+" + action.hint).TextColor(t.Text)
 					b.Children(func() {
 						ui.Row(c).Fill().Gap(10).AlignItems(ui.Center).Children(func() {
 							ui.Icon(c, icons[action.icon]).Size(16, 16).TextColor(t.TextMuted)
@@ -277,10 +264,7 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 					{"Quote", "quote", "⇧Q", page.typesetter.Quote},
 					{"Code block", "code", "⇧K", page.typesetter.CodeBlock},
 				} {
-					b := ui.ButtonBase(c.Key(action.label)).FillWidth().Height(44).Padding(0, 12).Radius(6).KeepFocus().Label(action.label).Tooltip("Cmd/Ctrl+" + action.hint)
-					if b.Hovered() {
-						b.Background(t.SurfaceHover)
-					}
+					b := writingui.Interactive(c, ui.ButtonBase(c.Key(action.label)), false).FillWidth().Height(44).Padding(0, 12).KeepFocus().Label(action.label).Tooltip("Cmd/Ctrl+" + action.hint).TextColor(t.Text)
 					b.Children(func() {
 						ui.Row(c).Fill().Gap(10).AlignItems(ui.Center).Children(func() {
 							ui.Icon(c, icons[action.icon]).Size(16, 16).TextColor(t.TextMuted)
@@ -311,7 +295,7 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 			a.appearanceOpen = !a.appearanceOpen
 			p.formatOpen = false
 		}
-		a.appearancePopover(c, appearance)
+		a.appearancePopover(c, appearance, &page.file.Focus)
 		a.captionButtons(c)
 	})
 }
@@ -346,9 +330,9 @@ func (p *TypesettingPreview) rail(c *ui.Context) {
 	ui.Column(c).Width(sidebarWidth).FillHeight().Padding(22, 12, 16).Gap(10).Background(t.Surface).Children(func() {
 		ui.Text(c, "Sample pages").FontSize(11).FontWeight(500).TextColor(t.TextMuted).Margin(0, 10, 6)
 		ui.Scroll(c.Key("sample-list")).FillWidth().Grow(1).MinHeight(0).Children(func() {
-			ui.Column(c).FillWidth().Gap(10).Children(func() {
+			ui.Column(c).FillWidth().Gap(4).Children(func() {
 				for i, page := range p.pages {
-					b := ui.ButtonBase(c.Key(page.file.ID)).FillWidth().Height(58).Padding(10).Radius(8).Label("Open sample " + strings.TrimSuffix(page.file.Name, ".md"))
+					b := ui.ButtonBase(c.Key(page.file.ID)).FillWidth().Height(60).Padding(10).Radius(8).Label("Open sample " + strings.TrimSuffix(page.file.Name, ".md"))
 					fill := ui.Transparent
 					if p.selected == i {
 						fill = t.SurfacePressed.Alpha(0.65)
@@ -365,8 +349,8 @@ func (p *TypesettingPreview) rail(c *ui.Context) {
 					b.Background(b.AnimateColor("fill", fill, ui.Animation{Duration: 110 * time.Millisecond, NonMotion: true}))
 					b.Children(func() {
 						ui.Column(c).FillWidth().Gap(5).Children(func() {
-							ui.Text(c, strings.TrimSuffix(page.file.Name, ".md")).FontSize(12).FontWeight(500).SingleLine().Ellipsis("…")
-							ui.Text(c, page.description).FontSize(10).TextColor(t.TextMuted).SingleLine().Ellipsis("…")
+							ui.Text(c, strings.TrimSuffix(page.file.Name, ".md")).FontSize(13).FontWeight(500).SingleLine().Ellipsis("…")
+							ui.Text(c, page.description).FontSize(11).TextColor(t.TextMuted).SingleLine().Ellipsis("…")
 						})
 					})
 					if b.Clicked() {
@@ -399,7 +383,7 @@ func (p *TypesettingPreview) footer(c *ui.Context) {
 	}
 	ui.Row(c).Height(30).FillWidth().Padding(0, 22).Gap(18).AlignItems(ui.Center).Children(func() {
 		ui.Text(c, "Writing preview · changes stay in memory").FontSize(11).TextColor(t.TextMuted).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
-		ui.Textf(c, "%d characters", page.stats.Characters).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted)
+		ui.Textf(c, "%d characters", page.stats.Characters).MinWidth(104).TextAlign(ui.End).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted)
 	})
 }
 
