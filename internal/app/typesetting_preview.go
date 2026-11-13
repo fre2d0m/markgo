@@ -43,6 +43,7 @@ func NewTypesettingPreview() *TypesettingPreview {
 		{"Long read", "A longer writing session", "# Room to think\n\n" + strings.Repeat("## An unhurried thought\n\nThere is no need to hurry the page. One observation leads to another, until the shape of an idea begins to emerge. 写作，是让模糊的想法慢慢变得清晰。\n\n", 700)},
 		{"A little structure", "Ideas, steps & small intentions", typesettingLists},
 		{"Words worth keeping", "Quotations & small experiments", typesettingBlocks},
+		{"A little emphasis", "The details within a sentence", typesettingInlines},
 	} {
 		f := mdeditor.NewFile(sample.name+".md", sample.source)
 		p.pages = append(p.pages, &previewPage{file: f, typesetter: mdeditor.NewTypesetter(f.State), description: sample.description})
@@ -72,6 +73,7 @@ func (p *TypesettingPreview) setMode(source bool) {
 	}
 	if source {
 		p.current().typesetter.ToSource()
+		p.current().typesetter.CancelInlineIntent()
 	} else {
 		p.current().typesetter.FromSource()
 	}
@@ -193,6 +195,31 @@ func (p *TypesettingPreview) header(c *ui.Context) {
 		}
 		ui.PopoverBase(c, format, &p.formatOpen, func(panel ui.Element) {
 			floatingPanel(panel).Width(220).Padding(6).Gap(2).Margin(8, 0, 0).Radius(12).Background(t.Background).Border(1, t.Border.Alpha(0.7)).Shadow(0, 8, 28, 0, ui.RGBA(0, 0, 0, 0.09)).Children(func() {
+				ui.Row(c.Key("inline-formats")).FillWidth().Gap(2).Children(func() {
+					for _, action := range []struct {
+						label, icon, hint string
+						kind              mdeditor.InlineKind
+					}{
+						{"Bold", "bold", "B", mdeditor.InlineBold}, {"Italic", "italic", "I", mdeditor.InlineItalic}, {"Strikethrough", "strikethrough", "Shift+X", mdeditor.InlineStrike}, {"Inline code", "code", "E", mdeditor.InlineCode}, {"Edit link", "link", "K", mdeditor.InlineLink},
+					} {
+						active := !p.sourceMode && page.typesetter.InlineActive(action.kind)
+						b := stateIconButton(c, action.icon, action.icon, action.label, active).Size(40, 40).Tooltip(action.label + " · Cmd/Ctrl+" + action.hint)
+						b.OnClick(func() {
+							if p.sourceMode {
+								page.typesetter.FromSource()
+							}
+							if action.kind == mdeditor.InlineLink {
+								p.setMode(false)
+								page.typesetter.OpenLink()
+							} else {
+								page.typesetter.ToggleInline(action.kind)
+							}
+							p.formatOpen = false
+							page.file.Focus.Focus(c)
+						})
+					}
+				})
+				ui.Box(c).Height(1).FillWidth().Margin(4, 6).Background(t.Border)
 				for level, label := range []string{"Paragraph", "Heading 1", "Heading 2", "Heading 3"} {
 					b := ui.ButtonBase(c.Key(label)).FillWidth().Height(44).Padding(0, 12).Radius(6).KeepFocus().Label(label)
 					if b.Hovered() {
@@ -345,6 +372,7 @@ func (p *TypesettingPreview) rail(c *ui.Context) {
 					if b.Clicked() {
 						if !p.sourceMode {
 							p.current().typesetter.ToSource()
+							p.current().typesetter.CancelInlineIntent()
 						}
 						p.selected = i
 						if !p.sourceMode {
@@ -409,4 +437,6 @@ const quietChinese = `# 慢一点，写下来
 中英文可以自然地放在一起：a little space to think。偶尔也可以留下一个小小的记号 ☀️。
 `
 
-const typesettingMarkdown = "---\ntitle: A small notebook\n---\n\n# Markdown stays yours\n\nHeadings, lists, simple quotations and fenced code are editable here. Links and tables keep their Markdown syntax.\n\n## A code fragment\n\n```go\nfmt.Println(\"Hello, writing\")\n```\n\n## A reference\n\nRead [a quiet page][note] when you have a moment.\n\n[note]: https://example.test/writing \"Notes\"\n\n| Thought | Next step |\n| --- | --- |\n| Begin | Write one sentence |\n"
+const typesettingMarkdown = "---\ntitle: A small notebook\n---\n\n# Markdown stays yours\n\nHeadings, lists, quotations, code and links are editable here. Tables keep their Markdown syntax.\n\n## A code fragment\n\n```go\nfmt.Println(\"Hello, writing\")\n```\n\n## A reference\n\nRead [a quiet page][note] when you have a moment.\n\n[note]: https://example.test/writing \"Notes\"\n\n| Thought | Next step |\n| --- | --- |\n| Begin | Write one sentence |\n"
+
+const typesettingInlines = "# A little emphasis\n\nSome words ask us to **slow down**. Others need only a *little space* to be heard. A sentence finds its rhythm in the details.\n\n## Keep what matters\n\nI thought I needed ~~a perfect beginning~~ one honest line. Then another. Writing is **a way of paying attention**, even when the page is still finding its shape.\n\n给一个词加一点**分量**，给一句话留一点*余韵*。不用装饰太多，让文字自己说话。\n\n## Leave a small connection\n\nReturn to [the morning notes](notes/morning.md) when an idea needs more room. Even a small word like `begin()` can be the start of something.\n\n> The details matter most when they let the writing feel effortless.\n"

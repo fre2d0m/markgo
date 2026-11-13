@@ -25,7 +25,8 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 		NoMarkdown: true, Font: font,
 		Theme: &richtext.Theme{Text: th.Text, Caret: th.Text, Selection: th.Selection, ParagraphSpacing: 0.12,
 			CodeFont: "monospace", CodeSize: 0.9, CodeBlockBackground: th.Surface, CodeBlockRadius: 8 / font.Size, CodeBlockPadding: [2]float32{16 / font.Size, 10 / font.Size}},
-		OnKey: func(key ui.Key, mods ui.Modifiers) bool { return t.key(key, mods, services) },
+		OnKey:         func(key ui.Key, mods ui.Modifiers) bool { return t.key(key, mods, services) },
+		OnLinkCommand: func() { t.OpenLink() },
 		Menu: func(m *ui.Menu) {
 			if m.Item("Undo").Disabled(!t.Source.Buffer.CanUndo()).Chosen() {
 				t.Undo(false)
@@ -43,6 +44,18 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 			}
 			if m.Item("Paste text").Chosen() {
 				t.Insert(services.ReadClipboard())
+			}
+			m.Separator()
+			for _, format := range []struct {
+				label string
+				kind  InlineKind
+			}{{"Bold", InlineBold}, {"Italic", InlineItalic}, {"Strikethrough", InlineStrike}, {"Inline code", InlineCode}} {
+				if m.Item(format.label).Chosen() {
+					t.ToggleInline(format.kind)
+				}
+			}
+			if m.Item("Edit link…").Chosen() {
+				t.OpenLink()
 			}
 			m.Separator()
 			if m.Item("Bulleted list").Chosen() {
@@ -70,27 +83,7 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 		},
 		SpansVersion: t.projection.styleVersion,
 		Spans: func(p int, _ richtext.ParagraphStyle, spans []ui.Span) []ui.Span {
-			size, weight := font.Size, 400
-			family := font.Family
-			line, exists := t.projection.shownLine(p)
-			if exists {
-				level := line.heading
-				if level > 0 {
-					size *= [...]float32{1, 2, 1.45, 1.2, 1.08, 1, 1}[level]
-					weight = 600
-				}
-				if line.block.code > 0 {
-					family, size = "monospace", font.Size*0.9
-				}
-			}
-			color := th.Text
-			if exists && line.list.checked {
-				color = th.TextMuted
-			}
-			for i := range spans {
-				spans[i] = ui.Span{Text: spans[i].Text, Font: family, Size: size, Weight: weight, Color: color, Underline: t.composing && spans[i].Underline}
-			}
-			return spans
+			return t.styleSpans(p, font, spans, th)
 		},
 		Space: func(p int) float32 {
 			line, ok := t.projection.shownLine(p)
@@ -117,6 +110,7 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 	t.listMarkers(c, view, font)
 	t.quoteBars(c, view)
 	t.codeHeaders(c, view)
+	t.linkPopover(c, view)
 	return view
 }
 
@@ -128,6 +122,7 @@ func (t *Typesetter) observe(ev ui.InputEvent, services ui.Services) {
 	switch ev.Kind {
 	case ui.InputPointerDown:
 		t.CancelComposition()
+		t.caretAffinity = false
 	case ui.InputCommand:
 		switch ev.Text {
 		case "delete", "selectAll":
@@ -152,6 +147,16 @@ func (t *Typesetter) observe(ev ui.InputEvent, services ui.Services) {
 }
 
 func (t *Typesetter) key(key ui.Key, mods ui.Modifiers, services ui.Services) bool {
+	if !t.composing && key == ui.KeyEscape && t.pendingStyles != 0 {
+		t.CancelInlineIntent()
+		return true
+	}
+	if !t.composing && mods == 0 && (key == ui.KeyLeft || key == ui.KeyRight) && t.inlineArrow(key) {
+		return true
+	}
+	if key == ui.KeyUp || key == ui.KeyDown || key == ui.KeyHome || key == ui.KeyEnd {
+		t.caretAffinity = false
+	}
 	if mods == ui.Cmd || mods == ui.Cmd|ui.Shift {
 		switch key {
 		case ui.KeyZ:
@@ -183,8 +188,27 @@ func (t *Typesetter) key(key ui.Key, mods ui.Modifiers, services ui.Services) bo
 		}
 	}
 	if !t.composing {
+		if mods == ui.Cmd {
+			switch key {
+			case ui.KeyK:
+				t.OpenLink()
+				return true
+			case ui.KeyB:
+				t.ToggleInline(InlineBold)
+				return true
+			case ui.KeyI:
+				t.ToggleInline(InlineItalic)
+				return true
+			case ui.KeyE:
+				t.ToggleInline(InlineCode)
+				return true
+			}
+		}
 		if mods == ui.Cmd|ui.Shift {
 			switch key {
+			case ui.KeyX:
+				t.ToggleInline(InlineStrike)
+				return true
 			case ui.Key7:
 				t.SetList(NumberedList)
 				return true

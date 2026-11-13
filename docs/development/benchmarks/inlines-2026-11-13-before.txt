@@ -1,0 +1,30 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/xddcode/markgo/internal/mdeditor
+cpu: Apple M2 Max
+BenchmarkTypesettingInlineEditCycle100K-12    	     200	   5619529 ns/op	 4815238 B/op	     586 allocs/op
+BenchmarkTypesettingInlineEditCycle100K-12    	     200	   5723400 ns/op	 4815302 B/op	     583 allocs/op
+BenchmarkTypesettingInlineEditCycle100K-12    	     200	   5716739 ns/op	 4816616 B/op	     584 allocs/op
+BenchmarkTypesettingEditCycle100K/start-12    	     200	   1539087 ns/op	 5439773 B/op	     572 allocs/op
+BenchmarkTypesettingEditCycle100K/start-12    	     200	   1563740 ns/op	 5438928 B/op	     570 allocs/op
+BenchmarkTypesettingEditCycle100K/start-12    	     200	   1556158 ns/op	 5439676 B/op	     570 allocs/op
+BenchmarkTypesettingEditCycle100K/middle-12   	     200	   5170119 ns/op	 4440829 B/op	     707 allocs/op
+BenchmarkTypesettingEditCycle100K/middle-12   	     200	   4748214 ns/op	 4440838 B/op	     707 allocs/op
+BenchmarkTypesettingEditCycle100K/middle-12   	     200	   4697039 ns/op	 4440848 B/op	     707 allocs/op
+BenchmarkTypesettingEditCycle100K/end-12      	     200	   7668842 ns/op	 3018709 B/op	     424 allocs/op
+BenchmarkTypesettingEditCycle100K/end-12      	     200	   7760781 ns/op	 3018688 B/op	     423 allocs/op
+BenchmarkTypesettingEditCycle100K/end-12      	     200	   7578261 ns/op	 3018704 B/op	     424 allocs/op
+BenchmarkTypesettingHeadlessInput100K-12      	     200	   3250654 ns/op	 1308273 B/op	     263 allocs/op
+BenchmarkTypesettingHeadlessInput100K-12      	     200	   3246922 ns/op	 1308238 B/op	     263 allocs/op
+BenchmarkTypesettingHeadlessInput100K-12      	     200	   3363534 ns/op	 1308233 B/op	     263 allocs/op
+PASS
+ok  	github.com/xddcode/markgo/internal/mdeditor	15.094s
+goos: darwin
+goarch: arm64
+pkg: github.com/xddcode/markgo/internal/app
+cpu: Apple M2 Max
+BenchmarkTypesettingPreviewEditCycle100K-12    	     200	   9323265 ns/op	 4936042 B/op	     715 allocs/op
+BenchmarkTypesettingPreviewEditCycle100K-12    	     200	   9242545 ns/op	 4935804 B/op	     712 allocs/op
+BenchmarkTypesettingPreviewEditCycle100K-12    	     200	   9426451 ns/op	 4935806 B/op	     712 allocs/op
+PASS
+ok  	github.com/xddcode/markgo/internal/app	6.126s

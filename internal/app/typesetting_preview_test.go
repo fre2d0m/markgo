@@ -136,15 +136,18 @@ func TestTypesettingScreenshots(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, theme := range []string{"paper", "warm", "graphite"} {
-		for _, scene := range []string{"writing", "chinese", "selection", "source", "appearance", "paragraph", "empty", "notice", "focus", "composition", "syntax", "long", "long-middle", "large-book", "list", "list-narrow", "list-tasks", "list-selection", "list-empty", "list-source", "list-large", "list-menu", "list-notice", "blocks", "blocks-narrow", "blocks-source", "quote-empty", "quote-deep", "code-empty", "code-language", "code-error", "code-copied", "code-large", "code-selection", "code-composition"} {
+		for _, scene := range []string{"writing", "chinese", "selection", "source", "appearance", "paragraph", "empty", "notice", "focus", "composition", "syntax", "long", "long-middle", "large-book", "list", "list-narrow", "list-tasks", "list-selection", "list-empty", "list-source", "list-large", "list-menu", "list-notice", "blocks", "blocks-narrow", "blocks-source", "quote-empty", "quote-deep", "code-empty", "code-language", "code-error", "code-copied", "code-large", "code-selection", "code-composition", "inline", "inline-narrow", "inline-selection", "inline-source", "inline-menu", "inline-link", "inline-link-error", "inline-link-new", "inline-large", "inline-composition", "inline-empty", "inline-notice"} {
 			p := NewTypesettingPreview()
 			p.shell.appearance.Theme = theme
 			w, h := 1320, 840
-			if scene != "writing" && scene != "chinese" && scene != "list" && scene != "blocks" {
+			if scene != "writing" && scene != "chinese" && scene != "list" && scene != "blocks" && scene != "inline" {
 				w, h = 960, 640
 			}
 			if strings.HasPrefix(scene, "list") {
 				p.selected = 5
+			}
+			if strings.HasPrefix(scene, "inline") {
+				p.selected = 7
 			}
 			if strings.HasPrefix(scene, "blocks") || strings.HasPrefix(scene, "quote") || strings.HasPrefix(scene, "code") {
 				p.selected = 6
@@ -154,6 +157,15 @@ func TestTypesettingScreenshots(t *testing.T) {
 				p.current().typesetter.FromSource()
 			}
 			switch scene {
+			case "inline-large":
+				p.shell.appearance.FontSize = 24
+				p.shell.appearance.Serif = true
+			case "inline-empty":
+				p.current().file.State.Buffer.Set("")
+				p.current().typesetter.FromSource()
+			case "inline-link", "inline-link-error", "inline-link-new":
+				p.current().file.State.Buffer.Set("# A small connection\n\nOne idea leads to another. Return to [the morning notes](notes/morning.md) when you need a little room.\n\nLeave a few words for tomorrow.")
+				p.current().typesetter.FromSource()
 			case "chinese", "composition":
 				p.selected = 1
 			case "empty":
@@ -198,6 +210,42 @@ func TestTypesettingScreenshots(t *testing.T) {
 			}
 			tt := ui.NewTester(p.View, w, h)
 			switch scene {
+			case "inline-source":
+				click(t, tt, "Source mode")
+			case "inline-menu":
+				doc := p.current().typesetter.Document
+				at := strings.Index(doc.Text().String(), "slow down")
+				doc.SetSelection(at, at+9)
+				tt.Frame()
+				click(t, tt, "Paragraph style")
+			case "inline-selection", "inline-composition":
+				doc := p.current().typesetter.Document
+				at := strings.Index(doc.Text().String(), "slow down")
+				doc.SetSelection(at, at+9)
+				tt.Frame()
+				if scene == "inline-composition" {
+					tt.Compose("manmanlai", 9)
+				}
+			case "inline-link", "inline-link-error", "inline-link-new":
+				doc := p.current().typesetter.Document
+				at := strings.Index(doc.Text().String(), "the morning notes")
+				doc.SetSelection(at+4, at+4)
+				if scene == "inline-link-new" {
+					at = strings.Index(doc.Text().String(), "One idea")
+					doc.SetSelection(at, at+8)
+				}
+				tt.Frame()
+				tt.Key(ui.Cmd, ui.KeyK)
+				if scene == "inline-link-error" {
+					tt.Key(ui.Cmd, ui.KeyA)
+					tt.Key(0, ui.KeyBackspace)
+					click(t, tt, "Apply link")
+				}
+			case "inline-notice":
+				doc := p.current().typesetter.Document
+				doc.SetSelection(0, 80)
+				p.current().typesetter.ToggleInline(mdeditor.InlineBold)
+				tt.Frame()
 			case "selection":
 				p.current().typesetter.Document.SetSelection(14, 55)
 				tt.Frame()

@@ -28,6 +28,13 @@ type Typesetter struct {
 	appliedStyle                        int
 	services                            ui.Services
 	blockUI                             typesetBlockUI
+	inlinePainted                       map[int]uint64
+	inlineDirty                         map[int]bool
+	caretAffinity                       bool
+	pendingStyles                       uint8
+	pendingStyleAt                      int
+	pendingStyleVersion                 uint64
+	linkUI                              typesetLinkUI
 }
 
 func NewTypesetter(source *editor.State) *Typesetter {
@@ -41,7 +48,15 @@ func NewTypesetter(source *editor.State) *Typesetter {
 // Only changed display text is replaced, so richtext retains the other
 // paragraphs' layouts. Source remains the only authority for undo.
 func (t *Typesetter) FromSource() {
+	previous := t.projection.text
 	t.projection.update(t.Source.Buffer.String())
+	if previous != t.projection.text {
+		a, z, n := changedText(previous, t.projection.text, len(previous))
+		first := strings.Count(previous[:a], "\n")
+		last := first + strings.Count(previous[a:z], "\n")
+		next := first + strings.Count(t.projection.text[a:n], "\n")
+		t.invalidateInlineStyles(first, last, next)
+	}
 	t.input.clearMark()
 	sel := t.Source.Selection()
 	shown := t.Document.Text().String()
@@ -50,17 +65,27 @@ func (t *Typesetter) FromSource() {
 		if strings.Contains(shown[start:oldEnd], "\n") || strings.Contains(t.projection.text[start:newEnd], "\n") {
 			t.appliedStyle = 0
 		}
+		first := strings.Count(t.projection.text[:start], "\n")
+		last := first + strings.Count(t.projection.text[start:newEnd], "\n")
+		for i := first; i <= last; i++ {
+			if t.inlineDirty == nil {
+				t.inlineDirty = map[int]bool{}
+			}
+			t.inlineDirty[i] = true
+		}
 		a, z := utf8.RuneCountInString(shown[:start]), utf8.RuneCountInString(shown[:oldEnd])
 		t.Document.Edit(func(e *richtext.Edit) {
 			e.ReplaceString(a, z, t.projection.text[start:newEnd], richtext.Attributes{})
 		})
 	}
 	t.projectParagraphStyles()
+	t.projectInlineStyles()
 	t.Document.SetSelection(t.projection.viewOffset(sel.Anchor), t.projection.viewOffset(sel.Head))
 	t.sourceVersion, t.richVersion = t.Source.Buffer.Version(), t.Document.Version()
 	t.beforeAnchor, t.beforeCaret = t.Document.Selection()
 	t.composing = false
 	t.input.marked = false
+	t.caretAffinity = true
 }
 
 // Sync commits completed native edits as precise source replacements. While an
@@ -76,7 +101,7 @@ func (t *Typesetter) Sync() {
 		// Native menu commands bypass EditorOptions.OnKey. Their rich-text
 		// changes are intentionally discarded, then the captured source command
 		// runs once. This also prevents HTML/RTF paste from rewriting Markdown.
-		t.Source.Select(t.projection.sourceOffset(t.beforeAnchor), t.projection.sourceOffset(t.beforeCaret))
+		t.selectSourceRange(t.beforeAnchor, t.beforeCaret)
 		t.appliedStyle = 0
 		t.FromSource()
 		switch command {
@@ -96,12 +121,23 @@ func (t *Typesetter) Sync() {
 			t.SetList(TaskList)
 		case "quote":
 			t.Quote()
+		case "bold":
+			t.ToggleInline(InlineBold)
+		case "italic":
+			t.ToggleInline(InlineItalic)
+		case "strikethrough":
+			t.ToggleInline(InlineStrike)
+		case "code":
+			t.ToggleInline(InlineCode)
+		case "link":
+			t.OpenLink()
 		case "codeBlock":
 			t.CodeBlock()
 		case "indent", "outdent":
 			t.indentBlocks(command == "outdent")
 		default:
 			t.Document.SetText(richtext.NewText(t.projection.text))
+			t.inlinePainted = nil
 			t.appliedStyle = 0
 			t.FromSource()
 			t.Notice = "This formatting is available in Markdown source."
@@ -115,8 +151,9 @@ func (t *Typesetter) Sync() {
 	a, z := t.Document.Selection()
 	if old == next {
 		// Unmapped rich formatting must never look saved without source syntax.
-		t.Source.Select(t.projection.sourceOffset(a), t.projection.sourceOffset(z))
+		t.selectSourceRange(a, z)
 		t.Document.SetText(richtext.NewText(old))
+		t.inlinePainted = nil
 		t.appliedStyle = 0
 		t.FromSource()
 		return
@@ -124,13 +161,18 @@ func (t *Typesetter) Sync() {
 	first, oldLast, newLast := changedText(old, next, runeByte(old, min(t.beforeAnchor, t.beforeCaret)))
 	start := utf8.RuneCountInString(old[:first])
 	oldEnd, newEnd := utf8.RuneCountInString(old[:oldLast]), utf8.RuneCountInString(next[:newLast])
-	sourceStart, sourceEnd := t.projection.sourceOffset(start), t.projection.sourceOffset(oldEnd)
+	sourceStart, sourceEnd := t.projection.sourceRange(start, oldEnd)
+	if start == oldEnd {
+		sourceStart = t.sourceCaret(start)
+		sourceEnd = sourceStart
+	}
 	if t.beforeAnchor != t.beforeCaret && min(t.beforeAnchor, t.beforeCaret) == 0 && max(t.beforeAnchor, t.beforeCaret) == t.projection.len() {
 		sourceStart, sourceEnd, start, oldEnd, newEnd = 0, len(t.projection.source), 0, t.projection.len(), t.Document.Text().Len()
 		first, newLast = 0, len(next)
 	}
 	inserted := next[first:newLast]
 	prepared := t.projection.prepareInsertion(sourceStart, sourceEnd, inserted, sourceStart == 0 && sourceEnd == len(t.projection.source) && sourceStart != sourceEnd)
+	prepared = t.prepareInlineTyping(sourceStart, sourceEnd, prepared)
 	mapSelection := func(pos int) int {
 		if pos < start {
 			return t.projection.sourceOffset(pos)
@@ -151,7 +193,19 @@ func (t *Typesetter) ToSource() {
 	t.CancelComposition()
 	t.Sync()
 	a, z := t.Document.Selection()
-	t.Source.Select(t.projection.sourceOffset(a), t.projection.sourceOffset(z))
+	t.selectSourceRange(a, z)
+}
+
+func (t *Typesetter) selectSourceRange(a, z int) {
+	start, end := t.projection.sourceRange(a, z)
+	if a == z {
+		start = t.sourceCaret(a)
+		end = start
+	}
+	if a > z {
+		start, end = end, start
+	}
+	t.Source.Select(start, end)
 }
 
 func (t *Typesetter) CancelComposition() {
@@ -175,7 +229,8 @@ func (t *Typesetter) Insert(text string) {
 	}
 	sel := t.Source.Selection()
 	prepared := t.projection.prepareInsertion(sel.Start(), sel.End(), text, sel.Start() == 0 && sel.End() == t.Source.Buffer.Len() && !sel.Empty())
-	end := sel.Start() + len(prepared.text)
+	prepared = t.prepareInlineTyping(sel.Start(), sel.End(), prepared)
+	end := sel.Start() + prepared.offset(utf8.RuneCountInString(text))
 	t.applyProjectedEdit(sel.Start(), sel.End(), prepared.text, end, end)
 	t.FromSource()
 }

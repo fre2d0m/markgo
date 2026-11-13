@@ -78,8 +78,16 @@ func (n *typesettingInput) MarkedRange() (ui.TextInputRange, bool) {
 
 func (n *typesettingInput) replace(a, z int, s string, marked bool) {
 	t := n.owner
+	attrs := richtext.Attributes{}
+	at := t.sourceCaret(min(a, z))
+	for _, m := range t.projection.inlines {
+		if at >= m.content && at <= m.contentEnd {
+			attrs = inlineAttributes(m, attrs)
+		}
+	}
+	attrs.Underline = attrs.Underline || marked
 	t.Document.Edit(func(e *richtext.Edit) {
-		e.ReplaceString(min(a, z), max(a, z), s, richtext.Attributes{Underline: marked})
+		e.ReplaceString(min(a, z), max(a, z), s, attrs)
 		caret := min(a, z) + utf8.RuneCountInString(s)
 		e.Select(caret, caret)
 	})
@@ -88,7 +96,7 @@ func (n *typesettingInput) replace(a, z int, s string, marked bool) {
 func (n *typesettingInput) ReplaceText(r *ui.TextInputRange, s string) {
 	t := n.owner
 	s = strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
-	plainTyping := r == nil && !t.composing && utf8.RuneCountInString(s) == 1 && !strings.ContainsAny(s, "\n\t`~")
+	plainTyping := r == nil && !t.composing && utf8.RuneCountInString(s) == 1 && !strings.ContainsAny(s, "\n\t`~*_[\\]()")
 	// GTK/IMM32 may unmark before sending the final replacement. If no
 	// intervening action occurred, replace that one commit, not its history.
 	if ended := n.ended; ended != nil && r != nil && *r == ended.range16 && t.Source.Buffer.Version() == ended.version {
@@ -105,7 +113,14 @@ func (n *typesettingInput) ReplaceText(r *ui.TextInputRange, s string) {
 		t.Sync()
 		t.beforeAnchor, t.beforeCaret = t.Document.Selection()
 	}
-	anchor, caret := t.projection.sourceOffset(t.beforeAnchor), t.projection.sourceOffset(t.beforeCaret)
+	anchor, caret := t.projection.sourceRange(t.beforeAnchor, t.beforeCaret)
+	if t.beforeAnchor == t.beforeCaret {
+		anchor = t.sourceCaret(t.beforeAnchor)
+		caret = anchor
+	}
+	if t.beforeAnchor > t.beforeCaret {
+		anchor, caret = caret, anchor
+	}
 	now := time.Now()
 	if group := n.typing; plainTyping && group != nil && group.version == t.Source.Buffer.Version() && anchor == caret && caret == group.end && now.Sub(group.at) < time.Second {
 		// Buffer exposes transactions, but not an open typing group across
@@ -188,6 +203,14 @@ func (n *typesettingInput) clearMark() {
 	if !n.marked {
 		return
 	}
+	s := n.owner.Document.Text().String()
+	first, last := strings.Count(s[:runeByte(s, n.start)], "\n"), strings.Count(s[:runeByte(s, n.end)], "\n")
+	if n.owner.inlineDirty == nil {
+		n.owner.inlineDirty = map[int]bool{}
+	}
+	for i := first; i <= last; i++ {
+		n.owner.inlineDirty[i] = true
+	}
 	n.owner.Document.Edit(func(e *richtext.Edit) {
 		e.Format(n.start, n.end, func(a *richtext.Attributes) { a.Underline = false })
 	})
@@ -213,20 +236,17 @@ func (n *typesettingInput) IndexForPoint(point ui.Point) (int, bool) {
 			continue
 		}
 		start, end := t.Document.Text().ParagraphRange(box.Start)
-		s := t.Document.Text().Slice(start, end).String()
-		size, weight := n.font.Size, 400
-		family := n.font.Family
-		line, exists := t.projection.shownLine(box.Index)
-		if exists {
-			level := line.heading
-			if level > 0 {
-				size *= [...]float32{1, 2, 1.45, 1.2, 1.08, 1, 1}[level]
-				weight = 600
+		var spans []ui.Span
+		for _, run := range t.Document.Text().Runs(start, end) {
+			a := run.Attributes
+			s := ui.Span{Text: run.Text, Weight: a.Weight, Italic: a.Italic, Underline: a.Underline, Strikethrough: a.Strikethrough}
+			if a.Code {
+				s.Font = "monospace"
 			}
-			if line.block.code > 0 {
-				family, size = "monospace", n.font.Size*0.9
-			}
+			spans = append(spans, s)
 		}
+		spans = t.styleSpans(box.Index, n.font, spans, nil)
+		line, exists := t.projection.shownLine(box.Index)
 		// Hit testing is used by native text services. The editor's ordinary
 		// pointer events still use richtext's retained layout directly.
 		indent, right := float32(0), float32(0)
@@ -240,8 +260,13 @@ func (n *typesettingInput) IndexForPoint(point ui.Point) (int, bool) {
 			indent, right = 16, 16
 		}
 		font := n.font
-		font.Family, font.Size = family, size
-		layout := ui.ShapeRichText([]ui.Span{{Text: s, Font: family, Size: size, Weight: weight}}, font, max(1, n.width-indent-right))
+		if exists && line.heading > 0 {
+			font.Size *= [...]float32{1, 2, 1.45, 1.2, 1.08, 1, 1}[line.heading]
+		}
+		if exists && line.block.code > 0 {
+			font.Family, font.Size = "monospace", n.font.Size*0.9
+		}
+		layout := ui.ShapeRichText(spans, font, max(1, n.width-indent-right))
 		pos := layout.PositionAt(ui.Point{X: point.X - indent, Y: point.Y - box.Top})
 		return nativeOffset(t.Document.Text().String(), start) + pos.Index, true
 	}
