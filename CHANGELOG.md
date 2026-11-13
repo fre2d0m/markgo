@@ -6,6 +6,10 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- Paper, Warm paper, and Graphite themes with a system-following option, local preference persistence, text-size controls, Modern/Book typography, and three page widths.
+- Original monochrome interface icons and a paper-and-ink application icon.
+- Appearance and sidebar shortcuts; source/selection/scroll/undo and preference-persistence regression coverage.
+
 - Open, create, save, and save copies of local Markdown files; browse and filter local folders.
 - Native file-association and file-drop requests, queued while another file operation runs.
 - Disk snapshots, guarded saves, external-change warnings, reload protection, and unsaved-change dialogs with save-and-close actions.
@@ -15,6 +19,10 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 - File integrity, saved-version, reload, Unicode, composition, and editing regression tests.
 
 ### Changed
+
+- Replaced stacked toolbars with one header and an on-demand formatting panel; unified controls and find fields around 40 DIP targets.
+- Refined sidebar, outline, reading typography, neutral syntax colors, hover feedback, and save-status presentation.
+- Start with a blank editable document; examples are available from the document menu.
 
 - Removed AI panel placeholders from the writing interface; AI work is deferred until the base editor is ready.
 

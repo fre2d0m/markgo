@@ -11,6 +11,12 @@ import (
 
 func main() {
 	a := markgoapp.New()
+	if os.Getenv("MARKGO_EPHEMERAL") != "1" {
+		if err := a.LoadAppearance(); err != nil {
+			log.Printf("Could not restore appearance: %v", err)
+		}
+	}
+	mygo.Theme.SetSource(a.ThemeSource())
 	mygo.App.OnOpenFile(a.OpenFile)
 	mygo.App.WhenReady(func() {
 		stateKey := "main"
@@ -24,12 +30,14 @@ func main() {
 			MinWidth:        960,
 			MinHeight:       640,
 			StateKey:        stateKey,
-			BackgroundColor: "light-dark(#fafafc, #18181b)",
+			BackgroundColor: "light-dark(#fcfcfa, #21221f)",
 			Content:         ui.View(a.View),
 		})
 		a.Attach(window)
 	})
-	if err := mygo.App.Run(); err != nil {
+	err := mygo.App.Run()
+	a.WaitForPreferences()
+	if err != nil {
 		log.Fatal(err)
 	}
 }

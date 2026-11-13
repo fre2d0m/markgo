@@ -66,9 +66,12 @@ func (a *App) outlineSidebar(c *ui.Context, file *mdeditor.File) {
 		ui.Column(c).FillWidth().Gap(2).Children(func() {
 			for _, heading := range analysis.Headings {
 				heading := heading
-				item := ui.ButtonBase(c.Key(heading.Offset)).FillWidth().MinHeight(32).
+				item := ui.ButtonBase(c.Key(heading.Offset)).FillWidth().MinHeight(40).
 					Padding(6, 8).PaddingStart(float32(8 + min(heading.Level-1, 4)*12)).
 					Radius(t.Radius).Disabled(!ready).Label("Go to " + heading.Title)
+				if item.Hovered() {
+					item.Background(t.SurfaceHover)
+				}
 				item.Children(func() {
 					ui.Text(c, heading.Title).FontSize(12).SingleLine().Ellipsis("…").TextColor(t.Text)
 				})
@@ -159,10 +162,10 @@ func (a *App) folderItems(c *ui.Context, entries []storage.Entry) {
 			}
 			if ui.TreeItem(c.Key(entry.Path), entry.Name, open, func() {
 				a.folderItems(c, entry.Children)
-			}).Clicked() {
+			}).Height(40).FontSize(12).Clicked() {
 				*open = !*open
 			}
-		} else if ui.TreeItem(c.Key(entry.Path), entry.Name, nil, nil).
+		} else if ui.TreeItem(c.Key(entry.Path), entry.Name, nil, nil).Height(40).FontSize(12).
 			Selected(a.current().Path == entry.Path).Disabled(a.fileBusy).Clicked() {
 			a.openPath(entry.Path)
 		}

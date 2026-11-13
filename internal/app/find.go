@@ -12,17 +12,23 @@ func renderFindBar(c *ui.Context, bar ui.Element, find *editor.FindBar) {
 	bar.Width(460).Gap(8).Padding(12).Background(t.Surface).Border(1, t.Border).
 		Radius(10).Shadow(0, 3, 14, 0, ui.RGBA(0, 0, 0, 0.14))
 	field := func(id, label string, value *string) ui.Element {
-		return ui.TextInputBase(c.Key(id), value).Grow(1).MinWidth(80).Height(32).
+		return ui.TextInputBase(c.Key(id), value).Grow(1).MinWidth(80).Height(40).
 			Padding(6, 9).Background(t.Background).Border(1, t.Border).
 			Radius(6).FontSize(13).Placeholder(label).Label(label)
 	}
 	button := func(id, text, label string) ui.Element {
-		item := ui.ButtonBase(c.Key(id)).Height(32).MinWidth(30).Padding(4, 8).
+		item := ui.ButtonBase(c.Key(id)).Height(40).MinWidth(40).Padding(4, 8).Center().
 			Radius(6).KeepFocus().Label(label).Tooltip(label)
 		if item.Hovered() {
 			item.Background(t.SurfaceHover)
 		}
-		item.Children(func() { ui.Text(c, text).FontSize(13) })
+		item.Children(func() {
+			if icon := icons[id]; icon != nil {
+				ui.Icon(c, icon).Size(17, 17).TextColor(t.TextMuted)
+			} else {
+				ui.Text(c, text).FontSize(12)
+			}
+		})
 		return item
 	}
 	bar.Children(func() {
@@ -41,7 +47,7 @@ func renderFindBar(c *ui.Context, bar ui.Element, find *editor.FindBar) {
 		})
 		ui.Row(c).FillWidth().Gap(4).AlignItems(ui.Center).Children(func() {
 			toggle := func(id, text, label string, on *bool) {
-				item := ui.ToggleBase(c.Key(id), on).Height(28).Padding(4, 8).Radius(5).
+				item := ui.ToggleBase(c.Key(id), on).Height(40).MinWidth(40).Padding(4, 8).Center().Radius(5).
 					KeepFocus().Label(label).Tooltip(label)
 				if *on {
 					item.Background(t.Accent.Alpha(0.16)).TextColor(t.Accent)
