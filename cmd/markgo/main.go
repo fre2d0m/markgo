@@ -12,7 +12,11 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "--typesetting-preview" {
 		preview := markgoapp.NewTypesettingPreview()
 		mygo.Theme.SetSource(mygo.ThemeLight)
-		mygo.App.WhenReady(func() { preview.Attach(mygo.NewWindow(preview.WindowOptions())) })
+		mygo.App.WhenReady(func() {
+			window := mygo.NewWindow(preview.WindowOptions())
+			setWindowIcon(window)
+			preview.Attach(window)
+		})
 		if err := mygo.App.Run(); err != nil {
 			log.Fatal(err)
 		}
@@ -39,6 +43,7 @@ func main() {
 			stateKey = ""
 		}
 		window := mygo.NewWindow(a.WindowOptions(stateKey))
+		setWindowIcon(window)
 		a.Attach(window)
 		mygo.App.OnSecondInstance(func(_ []string, _ string) {
 			window.Restore()
@@ -50,5 +55,11 @@ func main() {
 	a.WaitForSession()
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func setWindowIcon(window *mygo.Window) {
+	if err := markgoapp.SetWindowIcon(window); err != nil {
+		log.Printf("Could not set window icon: %v", err)
 	}
 }

@@ -12,7 +12,13 @@ import (
 func main() {
 	preview := app.NewTypesettingPreview()
 	mygo.Theme.SetSource(mygo.ThemeLight)
-	mygo.App.WhenReady(func() { preview.Attach(mygo.NewWindow(preview.WindowOptions())) })
+	mygo.App.WhenReady(func() {
+		window := mygo.NewWindow(preview.WindowOptions())
+		if err := app.SetWindowIcon(window); err != nil {
+			log.Printf("Could not set window icon: %v", err)
+		}
+		preview.Attach(window)
+	})
 	if err := mygo.App.Run(); err != nil {
 		log.Fatal(err)
 	}

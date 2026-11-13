@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "out": "build",
   "main": "./cmd/markgo",
+  "icon": "resources/icon.png",
   "fileAssociations": [
     {
       "ext": ["md", "markdown"],

@@ -36,7 +36,7 @@ The Appearance panel applies changes immediately to the whole client, including 
 
 ## Icons and controls
 
-The application icon in resources/icon.svg and the interface icons in internal/app/icons.go are original vector drawings. The 24-unit control icons share 1.65-unit strokes, rounded joins, and rounded terminals; no emoji or font glyphs stand in for controls. Heading labels H1/H2 and textual search options retain their familiar notation.
+The square application icon in resources/icon.png is configured in mygo.json and embedded for Window.SetIcon in both development and packaged builds. Keep at least 1024 × 1024 pixels so the same source can serve packaging and high-density displays. The interface icons in internal/app/icons.go are original vector drawings. The 24-unit control icons share 1.65-unit strokes, rounded joins, and rounded terminals; no emoji or font glyphs stand in for controls. Heading labels H1/H2 and textual search options retain their familiar notation.
 
 Icon actions, formatting tools, and find inputs/buttons have 40 DIP hit targets. Window controls use 44 × 48 DIP targets; their glyphs are deliberately smaller. Hover and pressed states use the shared palette; icon backgrounds transition over 100 ms and writing-action buttons press to 0.96 scale. Appearance, Formatting, and Read/Edit indicate their active state. The window close button uses a red background only while hovered or pressed. Controls retain meaningful labels, tooltips, keyboard focus, and native widget behavior.
 
