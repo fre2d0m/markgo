@@ -1,16 +1,45 @@
 package app
 
 import (
+	"image/color"
 	"math"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 	"github.com/xddcode/markgo/internal/preferences"
 )
+
+func TestThemeChoiceRepaintsWritingSurface(t *testing.T) {
+	for _, reading := range []bool{false, true} {
+		a := New()
+		tt := ui.NewTester(a.View, 960, 640)
+		if reading {
+			click(t, tt, "Read document")
+		}
+		for _, tc := range []struct {
+			label string
+			paper color.NRGBA
+		}{
+			{"Warm paper", color.NRGBA{0xfb, 0xf8, 0xf2, 0xff}},
+			{"Graphite", color.NRGBA{0x19, 0x1b, 0x20, 0xff}},
+			{"Paper", color.NRGBA{0xff, 0xff, 0xff, 0xff}},
+		} {
+			click(t, tt, "Appearance")
+			click(t, tt, tc.label+" theme")
+			tt.Key(0, ui.KeyEscape)
+			tt.Advance(200 * time.Millisecond)
+			got := color.NRGBAModel.Convert(tt.Image().At(400, 550)).(color.NRGBA)
+			if got != tc.paper {
+				t.Fatalf("%s reading=%v left the writing surface at %v, want %v", tc.label, reading, got, tc.paper)
+			}
+		}
+	}
+}
 
 func click(t *testing.T, tt *ui.Tester, label string) {
 	t.Helper()

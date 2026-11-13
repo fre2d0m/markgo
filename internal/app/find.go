@@ -9,11 +9,11 @@ import (
 // while giving each action a distinct label and fitting the narrow workbench.
 func renderFindBar(c *ui.Context, bar ui.Element, find *editor.FindBar) {
 	t := c.Theme()
-	bar.Width(460).Gap(8).Padding(12).Background(t.Surface).Border(1, t.Border).
-		Radius(10).Shadow(0, 3, 14, 0, ui.RGBA(0, 0, 0, 0.14))
+	bar.Width(460).Gap(8).Padding(12).Background(t.Background).Border(1, t.Border.Alpha(0.7)).
+		Radius(12).Shadow(0, 8, 28, 0, ui.RGBA(0, 0, 0, 0.09))
 	field := func(id, label string, value *string) ui.Element {
 		return ui.TextInputBase(c.Key(id), value).Grow(1).MinWidth(80).Height(40).
-			Padding(6, 9).Background(t.Background).Border(1, t.Border).
+			Padding(6, 9).Background(t.Surface).Border(1, t.Border).
 			Radius(6).FontSize(13).Placeholder(label).Label(label)
 	}
 	button := func(id, text, label string) ui.Element {
@@ -21,6 +21,9 @@ func renderFindBar(c *ui.Context, bar ui.Element, find *editor.FindBar) {
 			Radius(6).KeepFocus().Label(label).Tooltip(label)
 		if item.Hovered() {
 			item.Background(t.SurfaceHover)
+		}
+		if item.Pressed() {
+			item.Background(t.SurfacePressed)
 		}
 		item.Children(func() {
 			if icon := icons[id]; icon != nil {
@@ -49,8 +52,11 @@ func renderFindBar(c *ui.Context, bar ui.Element, find *editor.FindBar) {
 			toggle := func(id, text, label string, on *bool) {
 				item := ui.ToggleBase(c.Key(id), on).Height(40).MinWidth(40).Padding(4, 8).Center().Radius(5).
 					KeepFocus().Label(label).Tooltip(label)
-				if *on {
-					item.Background(t.Accent.Alpha(0.16)).TextColor(t.Accent)
+				if *on || item.Hovered() {
+					item.Background(t.SurfaceHover).TextColor(t.Text)
+				}
+				if item.Pressed() {
+					item.Background(t.SurfacePressed)
 				}
 				item.Children(func() { ui.Text(c, text).FontSize(11) })
 			}

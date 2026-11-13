@@ -2,7 +2,9 @@
 
 ## Documents and folders
 
-MarkGo starts on a blank, focused document. Begin typing, or open the **Document menu** (the three dots beside the wordmark) and choose **Open document…**. The plus beside Files creates another document. **Open a folder** at the foot of the sidebar shows Markdown files in a local folder and its subfolders. Built-in examples are available through **Document menu → Writing guide**. Filtering reveals matching files even inside collapsed folders; clearing the filter restores the previous expansion state. Use the refresh button after changing the folder outside MarkGo.
+MarkGo starts on a blank, focused document. Begin typing, or open the **Document menu** (the markgo wordmark and chevron at the top left) and choose **Open document…**. The plus beside Files creates another document. **Open a folder** at the foot of the sidebar shows Markdown files in a local folder and its subfolders. Built-in examples are available through **Document menu → Writing guide**. Filtering reveals matching files even inside collapsed folders; clearing the filter restores the previous expansion state. Use the refresh button after changing the folder outside MarkGo.
+
+In the open-document list, use the arrow keys, Home, and End to browse without losing list focus. Press Enter to begin writing in the selected document.
 
 Packaged builds register Markdown file types. Files sent by the operating system or dropped on the native window are queued while another file operation is running. These OS integrations require verification on your target platform.
 
@@ -23,6 +25,8 @@ The **Formatting** icon opens a small toolbar above the page. It works on one se
 The half-filled circle opens **Appearance**. Choose **Paper**, **Warm paper**, or **Graphite**, or enable **Follow system appearance**. These themes cover the whole interface. Adjust text size, choose **Modern** (system type) or **Book** (serif), and select a Narrow, Comfort, or Wide page. Changes apply immediately and are remembered locally. Switching a color theme preserves the caret, selection, scroll, and undo history. Typography changes reflow the page without changing the Markdown.
 
 Escape closes the panel, and clicking outside returns to the page. The **Focus mode** icon hides navigation and status; **Exit focus mode** restores the workspace. The sidebar icon toggles file navigation independently.
+
+The title bar is drawn as part of the interface. Drag its empty space or document title to move the window; double-click to toggle maximization. Minimize, maximize/restore, and close remain at the top right, including in Focus mode. Closing the window keeps the normal unsaved-document protection.
 
 ## Saving
 

@@ -6,6 +6,8 @@ MyGo's `ui.NewTester` drives the application view without opening a desktop wind
 
 Test observable behavior and persistent state rather than incidental pixel coordinates. Keep stable control labels and identities.
 
+Custom-title-bar tests use fake window commands to verify exactly-once dispatch, maximize/restore labels, and preservation of writing state. They exercise control reachability at 1×, 1.5×, and 2× display scale in a minimum-sized window, including Focus mode. Panel tests interrupt enter/exit transitions with and without reduced motion, then check selection and continued typing. File-list tests verify consecutive keyboard navigation and Enter-to-edit behavior.
+
 ## Editor and parser tests
 
 Preview replacements must preserve the source buffer and reveal the active element's marks. Cover CJK byte offsets, escapes, code fences, tasks, links, nested delimiters, YAML front matter, heading offsets, and statistics. List continuation must not alter fenced code or comments. Golden rendering tests complement rather than replace editing behavior tests.
@@ -19,6 +21,8 @@ Run `go test ./internal/mdeditor -run '^$' -bench BenchmarkAnalyze -benchmem` to
 ## Native verification
 
 Headless tests do not prove native window, font, input-method, clipboard, file-dialog, or GPU behavior. Changes in those areas require a real application run and platform-specific evidence. Record the operating system, architecture, and display scale; do not infer macOS or Linux behavior from Windows verification alone.
+
+For the custom title bar, check dragging from blank areas and the document title, double-click maximize/restore, all resize edges, minimize/restore, maximize icon changes, and close with unsaved text. On Windows 11, check Snap layouts over the maximize button and at 100%, 150%, and 200% display scaling. In Focus mode the window buttons must remain reachable. Clicking or dragging a writing control must not drag the window. Neither a compiled executable nor a headless render establishes those OS behaviors.
 
 ## Quality gates
 

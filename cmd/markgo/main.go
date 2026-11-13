@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/egoist/mygo"
-	"github.com/egoist/mygo/ui"
 	markgoapp "github.com/xddcode/markgo/internal/app"
 )
 
@@ -23,16 +22,7 @@ func main() {
 		if os.Getenv("MARKGO_EPHEMERAL") == "1" {
 			stateKey = ""
 		}
-		window := mygo.NewWindow(mygo.WindowOptions{
-			Title:           "MarkGo",
-			Width:           1320,
-			Height:          840,
-			MinWidth:        960,
-			MinHeight:       640,
-			StateKey:        stateKey,
-			BackgroundColor: "light-dark(#fcfcfa, #21221f)",
-			Content:         ui.View(a.View),
-		})
+		window := mygo.NewWindow(a.WindowOptions(stateKey))
 		a.Attach(window)
 	})
 	err := mygo.App.Run()

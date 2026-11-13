@@ -21,7 +21,10 @@ type App struct {
 	reading            bool
 	focusMode          bool
 	sidebar            bool
+	filesFocus         ui.Handle
 	window             *mygo.Window
+	windowCommands     windowCommands
+	windowMaximized    bool
 	disk               map[string]storage.Snapshot
 	nextID             int
 	fileBusy           bool
@@ -194,7 +197,12 @@ func (a *App) editorPane(c *ui.Context, f *mdeditor.File) {
 			})
 		} else {
 			ui.Row(c).Grow(1).FillWidth().MinHeight(0).Padding(38, 48).Justify(ui.Center).AlignItems(ui.Stretch).Children(func() {
-				editor.View(c.Key(f.ID), st).Bind(&f.Focus).Grow(1).MaxWidth(a.appearance.Width).MinWidth(0).FillHeight().AutoFocus()
+				view := editor.View(c.Key(f.ID), st).Bind(&f.Focus).Grow(1).MaxWidth(a.appearance.Width).MinWidth(0).FillHeight()
+				// Arrow navigation previews documents without moving focus out of
+				// the file list. Enter in that list explicitly starts writing.
+				if !a.filesFocus.FocusWithin(c) || !a.sidebar || a.focusMode {
+					view.AutoFocus()
+				}
 			})
 		}
 	})

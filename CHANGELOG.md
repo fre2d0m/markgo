@@ -20,11 +20,18 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Changed
 
+- Combined the native title bar and application header into one 48 DIP self-drawn bar; retained OS resize edges and wired custom window controls through the normal close protection and maximize state.
+- Refined Paper, Warm paper, and Graphite; reduced wordmark and icon weight, softened sidebar selection, and added active-tool states and interruptible, reduced-motion-aware panel transitions.
+- Kept keyboard focus in the file list while moving between documents; Enter begins editing the selection.
 - Replaced stacked toolbars with one header and an on-demand formatting panel; unified controls and find fields around 40 DIP targets.
 - Refined sidebar, outline, reading typography, neutral syntax colors, hover feedback, and save-status presentation.
 - Start with a blank editable document; examples are available from the document menu.
 
 - Removed AI panel placeholders from the writing interface; AI work is deferred until the base editor is ready.
+
+### Fixed
+
+- Switching a theme no longer caches the previous theme's editor colors under the new choice.
 
 ### Foundation
 
