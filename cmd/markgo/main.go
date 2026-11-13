@@ -9,6 +9,15 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--typesetting-preview" {
+		preview := markgoapp.NewTypesettingPreview()
+		mygo.Theme.SetSource(mygo.ThemeLight)
+		mygo.App.WhenReady(func() { preview.Attach(mygo.NewWindow(preview.WindowOptions())) })
+		if err := mygo.App.Run(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	ephemeral := os.Getenv("MARKGO_EPHEMERAL") == "1"
 	if !ephemeral && !mygo.App.RequestSingleInstanceLock() {
 		return
