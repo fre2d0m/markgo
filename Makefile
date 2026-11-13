@@ -13,6 +13,7 @@ tidy:
 vet:
 	go vet ./...
 	go tool mygo vet ./cmd/markgo
+	go tool mygo vet ./cmd/markgo-preview
 
 staticcheck:
 	go tool staticcheck ./...

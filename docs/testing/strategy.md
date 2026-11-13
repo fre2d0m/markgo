@@ -57,3 +57,12 @@ go tool mygo build
 - `go tool mygo build`: the real application and platform packaging path.
 
 Build output stays under ignored `build/` directories and is not committed. Use `MARKGO_EPHEMERAL=1` when launching an isolated native check; it bypasses native window state, appearance preferences, recovery, and recent documents. `go tool mygo build -skip-dmg` builds the macOS app bundle without producing a disk image. Headless screenshots are layout evidence only; label them accordingly. Temporary verification helpers live under ignored `.scratch/`; documentation screenshots are deliberate assets.
+
+The typesetting experiment has a separate sample-only executable: `go run ./cmd/markgo-preview`. It never loads or saves real documents or application state. Its behavior tests include direct `TextInputClient` calls because native input methods can bypass keyboard observers. Capture its 39 rendered states with:
+
+```sh
+MARKGO_SCREENSHOT_DIR="$PWD/build/typesetting-review" CGO_ENABLED=0 go test ./internal/app -run '^TestTypesettingScreenshots$' -count=1
+go test ./internal/mdeditor -run '^$' -bench BenchmarkTypesetting -benchtime=1s
+```
+
+Inspect every captured scene across all three palettes. See [native typesetting](../development/native-typesetting.md) for evidence boundaries and the remaining native-platform gates.

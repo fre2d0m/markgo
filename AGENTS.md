@@ -38,11 +38,14 @@ make check
 make race
 make security
 go tool mygo build
+go run ./cmd/markgo-preview
+go tool mygo build -skip-dmg ./cmd/markgo-preview
 ```
 
 ## Repository layout
 
 - `cmd/markgo`: executable entry; `internal/app.WindowOptions` owns the self-drawn window configuration.
+- `cmd/markgo-preview`: isolated, sample-only native typesetting executable. Never attach real file, recovery or preference stores to it; its state is intentionally in memory.
 - `internal/app`: workbench state, views, themes, and UI behavior tests.
 - `internal/mdeditor`: Markdown document editor state and live-preview replacements.
 - `internal/storage`: UTF-8 file snapshots, guarded saving, and folder enumeration.

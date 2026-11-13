@@ -10,6 +10,7 @@ import (
 // Original 24-unit drawings share one optical weight and round terminals.
 // They are native vector paths, parsed once rather than text glyphs or bitmaps.
 var icons = map[string]*ui.SVG{
+	"undo":            iconPath(`<path d="M9 5 4 10l5 5M4 10h10a6 6 0 0 1 0 12"/>`),
 	"recovery":        iconPath(`<path d="M4 8a8 8 0 1 1-1 7M4 3v5h5M12 7v5l3 2"/>`),
 	"mark":            iconPath(`<path d="M5 19V5l7 7 7-7v14M5 19h14"/>`),
 	"sidebar":         iconPath(`<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9 5v14"/>`),
