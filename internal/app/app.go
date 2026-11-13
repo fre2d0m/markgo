@@ -3,6 +3,7 @@ package app
 import (
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -29,6 +30,8 @@ type App struct {
 	nextID             int
 	fileBusy           bool
 	saving             bool
+	savingFileID       string
+	savedEvents        map[string]uint64
 	notice             string
 	closing            bool
 	allowExit          bool
@@ -56,18 +59,19 @@ func New() *App {
 	file := mdeditor.NewFile("Untitled 1.md", "")
 	file.ID = "document-1"
 	return &App{
-		files:      []*mdeditor.File{file},
-		selected:   file.ID,
-		nextID:     1,
-		preview:    true,
-		appearance: defaultAppearance(),
-		sidebar:    true,
-		disk:       make(map[string]storage.Snapshot),
-		expanded:   make(map[string]*bool),
-		analyses:   make(map[string]*analysisCache),
-		conflicts:  make(map[string]bool),
-		checking:   make(map[string]bool),
-		notice:     "",
+		files:       []*mdeditor.File{file},
+		selected:    file.ID,
+		nextID:      1,
+		preview:     true,
+		appearance:  defaultAppearance(),
+		sidebar:     true,
+		disk:        make(map[string]storage.Snapshot),
+		expanded:    make(map[string]*bool),
+		analyses:    make(map[string]*analysisCache),
+		conflicts:   make(map[string]bool),
+		checking:    make(map[string]bool),
+		savedEvents: make(map[string]uint64),
+		notice:      "",
 	}
 }
 
@@ -97,6 +101,7 @@ func (a *App) visibleFiles() []*mdeditor.File {
 func (a *App) View(c *ui.Context) {
 	a.systemDark = c.Theme().Dark
 	c.SetTheme(writingTheme(c.Theme(), a.appearance.Theme))
+	c.SetMenuPresentation(ui.PopoverMenus)
 	a.processOpenQueue()
 	if c.Shortcut(ui.Cmd, ui.KeyN) && !a.fileBusy {
 		a.newDocument()
@@ -115,6 +120,9 @@ func (a *App) View(c *ui.Context) {
 	}
 	if c.Shortcut(ui.Cmd|ui.Shift, ui.KeyF) {
 		a.focusMode = !a.focusMode
+		if a.focusMode && !a.reading {
+			a.current().Focus.Focus(c)
+		}
 	}
 	if c.Shortcut(ui.Cmd, ui.KeyComma) {
 		a.focusMode = false
@@ -123,14 +131,24 @@ func (a *App) View(c *ui.Context) {
 	}
 	if c.Shortcut(ui.Cmd, ui.KeyBackslash) {
 		a.sidebar = !a.sidebar
+		if !a.sidebar && !a.reading {
+			a.current().Focus.Focus(c)
+		}
 	}
-	ui.Column(c).Fill().Background(c.Theme().Background).Children(func() {
+	root := ui.Column(c.Key("workbench")).Fill().Background(c.Theme().Background)
+	showSidebar := a.sidebar && !a.focusMode
+	target := float32(0)
+	if showSidebar {
+		target = sidebarWidth
+	}
+	width := root.AnimateTo("sidebar-width", target, ui.Animation{Duration: 180 * time.Millisecond, Ease: ui.EaseOut})
+	root.Children(func() {
 		a.header(c)
-		ui.Row(c).Grow(1).FillWidth().AlignItems(ui.Stretch).Children(func() {
-			if a.sidebar && !a.focusMode {
-				a.fileSidebar(c)
+		ui.Row(c.Key("workspace-body")).Grow(1).FillWidth().AlignItems(ui.Stretch).Children(func() {
+			if width > 0.5 {
+				ui.Column(c.Key("sidebar-slot")).Width(width).Shrink(0).FillHeight().Clip().Disabled(!showSidebar).Label("File sidebar").Children(func() { a.fileSidebar(c) })
 			}
-			a.editorPane(c, a.current())
+			a.editorPane(c.Key("document-pane"), a.current())
 		})
 		if !a.focusMode {
 			a.statusBar(c, a.current())
@@ -219,8 +237,12 @@ func (a *App) statusBar(c *ui.Context, f *mdeditor.File) {
 		state = "Unsaved changes"
 	}
 	ui.Row(c).FillWidth().Height(30).Padding(0, 22).Gap(18).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, state).FontSize(11).TextColor(t.TextMuted).Tooltip(f.Path)
-		ui.Text(c, a.notice).FontSize(11).TextColor(t.TextMuted).Grow(1).MinWidth(0).SingleLine().Ellipsis("…").Tooltip(a.notice).Role(ui.RoleStatus)
+		a.saveStatus(c, f, state)
+		notice := a.notice
+		if a.saving && a.savingFileID == f.ID && notice == "Saving…" {
+			notice = ""
+		}
+		ui.Text(c, notice).FontSize(11).TextColor(t.TextMuted).Grow(1).MinWidth(0).SingleLine().Ellipsis("…").Tooltip(notice).Role(ui.RoleStatus)
 		if !a.reading {
 			ui.Textf(c, "%d : %d", pos.Line+1, mdeditor.DisplayColumn(f.State)).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted).Tooltip("Line and column")
 		}

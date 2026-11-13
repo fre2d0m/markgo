@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
@@ -200,12 +201,14 @@ func TestFocusModeRestoresWorkspace(t *testing.T) {
 	if err := tt.Click("Focus mode"); err != nil {
 		t.Fatal(err)
 	}
+	tt.Advance(200 * time.Millisecond)
 	if !a.focusMode || tt.HasText("Open documents") {
 		t.Fatalf("focus mode: %q", tt.Texts())
 	}
 	if err := tt.Click("Exit focus mode"); err != nil {
 		t.Fatal(err)
 	}
+	tt.Advance(200 * time.Millisecond)
 	if a.focusMode || !tt.HasText("Open documents") {
 		t.Fatalf("workspace did not return: %q", tt.Texts())
 	}

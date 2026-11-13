@@ -6,9 +6,13 @@ MarkGo starts on a blank, focused document. Begin typing, or open the **Document
 
 In the open-document list, use the arrow keys, Home, and End to browse without losing list focus. Press Enter to begin writing in the selected document.
 
+The current or hovered document shows a close button. Right-click a document to save it, copy its path, or close it. These actions address that document; closing unsaved work keeps the same confirmation behavior as the document menu.
+
 Packaged builds register Markdown file types. Files sent by the operating system or dropped on the native window are queued while another file operation is running. These OS integrations require verification on your target platform.
 
-The sidebar's **Outline** tab lists headings in the current document. Choose a heading to move the editing caret there. Code-fence contents and YAML front matter are excluded from the outline.
+The sidebar's **Outline** tab lists headings in the current document. Choose a heading to move the editing caret there, or jump the page there in Read mode. While editing, the current section follows the caret. Code-fence contents and YAML front matter are excluded from the outline.
+
+Read-mode anchors currently choose the first matching title when headings repeat; editing-mode outline navigation uses exact source positions.
 
 ## Writing and reading
 
@@ -26,6 +30,8 @@ The half-filled circle opens **Appearance**. Choose **Paper**, **Warm paper**, o
 
 Escape closes the panel, and clicking outside returns to the page. The **Focus mode** icon hides navigation and status; **Exit focus mode** restores the workspace. The sidebar icon toggles file navigation independently.
 
+Sidebar and tab transitions can be interrupted and follow the operating system's reduced-motion preference. The page is never faded or scaled. File and text context menus share the chosen theme.
+
 The title bar is drawn as part of the interface. Drag its empty space or document title to move the window; double-click to toggle maximization. Minimize, maximize/restore, and close remain at the top right, including in Focus mode. Closing the window keeps the normal unsaved-document protection.
 
 ## Saving
@@ -37,6 +43,8 @@ MarkGo checks the existing file before replacing it. If it changed outside the a
 Saving preserves ordinary LF or CRLF line endings. An unchanged file with mixed endings retains its exact bytes. After editing mixed endings, **Save as** asks before creating a copy normalized to CRLF. The original file remains untouched.
 
 Saving is manual. There is no automatic save or crash recovery. New-file creation requires hard-link support on the destination filesystem. Symbolic links and non-UTF-8 files are not supported.
+
+The footer briefly confirms **Saved just now** only after the current version finishes saving. A newer edit takes precedence and stays marked **Unsaved changes**.
 
 ## Keyboard shortcuts
 

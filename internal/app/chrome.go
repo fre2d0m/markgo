@@ -3,6 +3,8 @@ package app
 import (
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
+	"github.com/xddcode/markgo/internal/mdeditor"
+	"time"
 )
 
 func (a *App) header(c *ui.Context) {
@@ -30,6 +32,9 @@ func (a *App) header(c *ui.Context) {
 				ui.Spacer(c)
 				if iconButton(c, "sidebar", "sidebar", "Toggle file sidebar").Clicked() {
 					a.sidebar = !a.sidebar
+					if !a.sidebar && !a.reading {
+						file.Focus.Focus(c)
+					}
 				}
 			})
 		}
@@ -77,6 +82,9 @@ func (a *App) header(c *ui.Context) {
 			}
 			if iconButton(c, "focus", "focus", "Focus mode").Clicked() {
 				a.focusMode = true
+				if !a.reading {
+					file.Focus.Focus(c)
+				}
 			}
 			appearance := stateIconButton(c, "appearance", "appearance", "Appearance", a.appearanceOpen)
 			if appearance.Clicked() {
@@ -124,93 +132,128 @@ func (a *App) fileSidebar(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Width(sidebarWidth).Shrink(0).FillHeight().Padding(12, 12, 12).Gap(12).Background(t.Surface).Children(func() {
 		ui.Row(c).FillWidth().Gap(4).AlignItems(ui.Center).Children(func() {
-			for index, label := range []string{"Files", "Outline"} {
-				button := ui.ButtonBase(c.Key(label)).Height(40).Padding(0, 10).Center().Radius(6).Label(label)
-				color := t.TextMuted
-				if button.Hovered() {
-					button.Background(t.SurfaceHover)
-					color = t.Text
-				}
-				if a.sideView == index {
-					color = t.Text
-				}
-				button.Children(func() {
-					ui.Column(c).FillHeight().Justify(ui.SpaceBetween).AlignItems(ui.Center).Children(func() {
-						ui.Box(c).Height(2)
+			tabs := ui.Row(c.Key("navigation-tabs")).Width(128).Height(40)
+			x := tabs.AnimateTo("indicator", float32(a.sideView)*64+24, ui.Animation{Duration: 160 * time.Millisecond, Ease: ui.EaseOut})
+			tabs.Children(func() {
+				for index, label := range []string{"Files", "Outline"} {
+					button := ui.ButtonBase(c.Key(label)).Size(64, 40).Center().Radius(6).Label(label)
+					color := t.TextMuted
+					if button.Hovered() {
+						button.Background(t.SurfaceHover)
+						color = t.Text
+					}
+					if a.sideView == index {
+						color = t.Text
+					}
+					button.Children(func() {
 						ui.Text(c, label).FontSize(12).FontWeight(500).TextColor(color)
-						line := ui.Box(c).Width(16).Height(2).Radius(1)
-						if a.sideView == index {
-							line.Background(t.Text)
-						}
 					})
-				})
-				if button.Clicked() {
-					a.sideView = index
+					if button.Clicked() {
+						a.sideView = index
+					}
 				}
-			}
+				ui.Box(c.Key("tab-indicator")).Absolute().Left(x).Bottom(0).Size(16, 2).Radius(1).Background(t.Text).PassThrough().Label("Sidebar tab indicator")
+			})
 			ui.Spacer(c)
 			if iconButton(c, "new", "plus", "New document").Disabled(a.fileBusy).Clicked() {
 				a.newDocument()
 			}
 		})
-		if a.sideView == 1 {
-			a.outlineSidebar(c, a.current())
-			return
-		}
-		ui.SearchField(c.Key("filter"), &a.query).Height(40).Background(t.Background).Border(0, ui.Transparent).Radius(7).Placeholder("Find a document").Label("Filter documents")
-		ui.Row(c).FillWidth().Padding(2, 10).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, "Open documents").FontSize(10).TextColor(t.TextMuted).Grow(1)
-			ui.Textf(c, "%d", len(a.files)).FontSize(10).FontFeatures("tnum").TextColor(t.TextMuted)
+		ui.Column(c.Key(a.sideView)).Grow(1).MinHeight(0).FillWidth().Gap(12).
+			Transition(ui.ElementTransition{Duration: 120 * time.Millisecond, Colors: true, Enter: &ui.Motion{Y: 4, Opacity: 0}, ExitDuration: -1}).Children(func() {
+			if a.sideView == 1 {
+				a.outlineSidebar(c, a.current())
+				return
+			}
+			a.documentList(c)
 		})
-		files := a.visibleFiles()
-		// Preserve the Sidebar's keyboard model with a quieter selection color.
-		listTheme := *t
-		listTheme.Accent, listTheme.InactiveAccent, listTheme.AccentText = t.SurfaceHover, t.SurfaceHover, t.Text
-		listTheme.SurfacePressed = t.SurfaceHover
-		listScope := ui.Themed(c, &listTheme).Background(t.Surface).MinHeight(0)
-		if a.folder == nil {
-			listScope.Grow(1)
-		} else {
-			listScope.MaxHeight(180).Shrink(1)
-		}
-		listScope.Children(func() {
-			list := ui.Sidebar(c, &a.selected, func() {
-				for _, file := range files {
-					label := file.Name
-					if file.Modified() {
-						label += "  •"
-					}
-					ui.SidebarItem(c.Key(file.ID), file.ID, nil, label).Height(40).Radius(6).FontSize(12)
-				}
-			}).Label("Documents").Bind(&a.filesFocus).Grow(1).MinHeight(0).Padding(0)
-			a.filesFocus.OnShortcut(c, 0, ui.KeyEnter, func() { a.reading = false; a.current().Focus.Focus(c) })
-			list.Children(func() {
-				if len(files) == 0 {
-					ui.Text(c, "No matching documents").FontSize(12).TextColor(t.TextMuted).Padding(12, 10)
-				}
-			})
-		})
-		if a.folder != nil {
-			ui.Row(c).FillWidth().PaddingStart(10).AlignItems(ui.Center).Children(func() {
-				ui.Text(c, a.folder.Name).FontSize(10).FontWeight(600).TextColor(t.TextMuted).SingleLine().Ellipsis("…").Grow(1)
-				if iconButton(c, "refresh", "refresh", "Refresh folder").Disabled(a.fileBusy).Clicked() {
-					a.refreshFolder()
-				}
-			})
-			ui.Scroll(c).Grow(1).MinHeight(0).Children(func() { ui.Tree(c, func() { a.folderItems(c, a.folder.Children) }).Label("Folder contents") })
-		}
-		open := ui.ButtonBase(c.Key("open-folder")).FillWidth().Height(40).Padding(0, 10).Radius(7).Label("Open folder").Disabled(a.fileBusy)
-		if open.Hovered() {
-			open.Background(t.SurfaceHover)
-		}
-		open.Children(func() {
-			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-				ui.Icon(c, icons["folder"]).Size(17, 17).TextColor(t.TextMuted)
-				ui.Text(c, "Open a folder").FontSize(12).TextColor(t.TextMuted)
-			})
-		})
-		if open.Clicked() {
-			a.openFolderDialog()
-		}
 	})
+}
+
+func (a *App) documentList(c *ui.Context) {
+	t := c.Theme()
+	services := c.Services()
+	ui.SearchField(c.Key("filter"), &a.query).Height(40).Background(t.Background).Border(0, ui.Transparent).Radius(7).Placeholder("Find a document").Label("Filter documents")
+	ui.Row(c).FillWidth().Padding(2, 10).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, "Open documents").FontSize(10).TextColor(t.TextMuted).Grow(1)
+		ui.Textf(c, "%d", len(a.files)).FontSize(10).FontFeatures("tnum").TextColor(t.TextMuted)
+	})
+	files := a.visibleFiles()
+	// Preserve the Sidebar's keyboard model with a quieter selection color.
+	listTheme := *t
+	listTheme.Accent, listTheme.InactiveAccent, listTheme.AccentText = t.SurfaceHover, t.SurfaceHover, t.Text
+	listTheme.SurfacePressed = t.SurfaceHover
+	listScope := ui.Themed(c, &listTheme).Background(t.Surface).MinHeight(0)
+	if a.folder == nil {
+		listScope.Grow(1)
+	} else {
+		listScope.MaxHeight(180).Shrink(1)
+	}
+	listScope.Children(func() {
+		list := ui.Sidebar(c, &a.selected, func() {
+			for _, file := range files {
+				label := file.Name
+				if file.Modified() {
+					label += "  •"
+				}
+				row := ui.SidebarItem(c.Key(file.ID), file.ID, nil, label).Height(40).PaddingEnd(0).Radius(6).FontSize(12).Label("Document " + file.Name)
+				path := file.Path
+				if path == "" {
+					path = file.Name
+				}
+				row.Tooltip(path).ContextMenu(func(m *ui.Menu) { a.fileMenu(services, m, file) })
+				showClose := row.Hovered() || file.ID == a.selected || c.Preferences().NoHover
+				row.Children(func() {
+					ui.Box(c).Size(40, 40).Children(func() {
+						if showClose {
+							close := iconButton(c, "close-file", "close", "Close "+file.Name).Disabled(a.fileBusy)
+							close.Transition(ui.ElementTransition{Duration: 100 * time.Millisecond, Colors: true, Enter: &ui.Motion{Opacity: 0}, Exit: &ui.Motion{Opacity: 0}})
+							close.OnClick(func() { a.closeDocument(file) })
+						}
+					})
+				})
+			}
+		}).Label("Documents").Bind(&a.filesFocus).Grow(1).MinHeight(0).Padding(0)
+		a.filesFocus.OnShortcut(c, 0, ui.KeyEnter, func() { a.reading = false; a.current().Focus.Focus(c) })
+		list.Children(func() {
+			if len(files) == 0 {
+				ui.Text(c, "No matching documents").FontSize(12).TextColor(t.TextMuted).Padding(12, 10)
+			}
+		})
+	})
+	if a.folder != nil {
+		ui.Row(c).FillWidth().PaddingStart(10).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, a.folder.Name).FontSize(10).FontWeight(600).TextColor(t.TextMuted).SingleLine().Ellipsis("…").Grow(1)
+			if iconButton(c, "refresh", "refresh", "Refresh folder").Disabled(a.fileBusy).Clicked() {
+				a.refreshFolder()
+			}
+		})
+		ui.Scroll(c).Grow(1).MinHeight(0).Children(func() { ui.Tree(c, func() { a.folderItems(c, a.folder.Children) }).Label("Folder contents") })
+	}
+	open := ui.ButtonBase(c.Key("open-folder")).FillWidth().Height(40).Padding(0, 10).Radius(7).Label("Open folder").Disabled(a.fileBusy)
+	if open.Hovered() {
+		open.Background(t.SurfaceHover)
+	}
+	open.Children(func() {
+		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+			ui.Icon(c, icons["folder"]).Size(17, 17).TextColor(t.TextMuted)
+			ui.Text(c, "Open a folder").FontSize(12).TextColor(t.TextMuted)
+		})
+	})
+	if open.Clicked() {
+		a.openFolderDialog()
+	}
+}
+
+func (a *App) fileMenu(services ui.Services, m *ui.Menu, file *mdeditor.File) {
+	if m.Item("Save document").Disabled(a.fileBusy).Chosen() {
+		a.saveFile(file, false, nil)
+	}
+	if m.Item("Copy file path").Disabled(file.Path == "").Chosen() {
+		services.WriteClipboard(file.Path)
+	}
+	m.Separator()
+	if m.Item("Close document").Disabled(a.fileBusy).Chosen() {
+		a.closeDocument(file)
+	}
 }

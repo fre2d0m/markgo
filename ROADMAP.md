@@ -1,6 +1,6 @@
 # MarkGo roadmap
 
-The roadmap describes direction, not release promises. GitHub Issues and Milestones contain actionable work and acceptance criteria.
+The roadmap describes direction, not release promises. The [beta delivery plan](docs/development/beta-delivery.md) defines the engineering order and acceptance gates; features below are not all implemented.
 
 ## M0 — Engineering foundation
 
@@ -25,19 +25,19 @@ The roadmap describes direction, not release promises. GitHub Issues and Milesto
 - HTML/PDF export and accessible, localized interface foundations.
 - Large-document benchmarks and input-latency budgets.
 
-## M3 — Reviewable AI editing
+## M3 — Release quality
+
+- Verified Windows, macOS, and Linux packages for each platform advertised by the release.
+- Reproducible release provenance and signing where credentials are available.
+- Real-platform compatibility, accessibility, performance, and recovery testing.
+
+## After 1.0 beta — Reviewable AI editing
 
 - Ollama, LM Studio, and other user-configured OpenAI-compatible providers.
 - Selection rewrite, summarization, restructuring, and translation.
 - Explicit context selection, streaming responses, cancellation, and redaction.
 - Preview diffs, per-hunk decisions, and undoable accepted edits.
 - Local document indexing without a mandatory account or MarkGo server.
-
-## M4 — Release quality
-
-- Verified Windows, macOS, and Linux packages.
-- Reproducible release provenance and signing where credentials are available.
-- Real-platform compatibility, accessibility, performance, and recovery testing.
 
 ## Explicit non-goals
 
