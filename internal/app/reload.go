@@ -90,6 +90,8 @@ func (a *App) applyReload(id string, version uint64, loaded *mdeditor.File, snap
 		a.disk[id] = snapshot
 		delete(a.analyses, id)
 		delete(a.conflicts, id)
+		delete(a.recovered, id)
+		delete(a.backedUp, id)
 		a.notice = "Reloaded " + loaded.Name
 		return true
 	}

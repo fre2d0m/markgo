@@ -28,7 +28,8 @@ Open a Markdown file or folder, write with source-preserving live preview, and u
 - Apply headings, bold, emphasis, inline code, links, lists, and quotes with undoable formatting controls.
 - Continue ordinary lists, tasks, and quotes with Return; leave an empty item with another Return.
 - Find and replace with case, whole-word, regular-expression, and selection options. Replace all is one undo step.
-- Start on a blank page; open built-in writing guides from the document menu when needed.
+- Return to your previous documents and unfinished drafts; a first launch starts on a blank page.
+- Search recent documents, keep drafts when closing, and recover completed local checkpoints after an interrupted session.
 - Use source or live-preview editing, a formatted reading view, and focus mode.
 - Write beneath one self-drawn title bar, with integrated window controls and a compact file sidebar.
 - Choose Paper, Warm paper, or Graphite for the whole interface, or follow system appearance.
@@ -41,7 +42,7 @@ The [writing guide](docs/writing.md) explains shortcuts, saving, and the differe
 
 Live preview hides supported Markdown delimiters while keeping one editable source buffer. It is not yet a complete Typora-style typesetting editor: headings use the editor's line metrics, and tables and images are formatted in **Read** mode while their source is edited in **Edit** mode. Math remains TeX text.
 
-Save is manual; automatic saving and crash recovery are not available. External changes are checked when the window regains focus and before saving. Save as creates a new file and refuses to overwrite an existing destination. Files must be regular UTF-8 files; symbolic links are rejected. New-file creation requires filesystem hard-link support. Edited documents with mixed line endings require an explicitly confirmed normalized copy.
+Save is manual. Recovery keeps a separate local copy; it does not automatically save your Markdown files. Checkpoints are scheduled after a short pause, with a five-second maximum scheduling delay during continuous editing. Only completed writes can be recovered; see [recovery and recent documents](docs/writing.md#recovery-and-recent-documents). External changes are checked when the window regains focus and before saving. Save as creates a new file and refuses to overwrite an existing destination. Files must be regular UTF-8 files; symbolic links are rejected. New-file creation requires filesystem hard-link support. Edited documents with mixed line endings require an explicitly confirmed normalized copy.
 
 AI features are deferred until the core writing experience is ready. The application does not connect to model providers. Platform-specific window, input-method, dialog, and packaging behavior needs native verification on each supported operating system.
 

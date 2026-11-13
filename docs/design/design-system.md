@@ -4,7 +4,7 @@
 
 MarkGo should feel like opening a good notebook: a quiet page, clear type, and tools within reach. Its identity comes from proportion, spacing, an original line-drawn M, and consistent interactions. Keep the interface restrained: no decorative gradients, multicolored panels, or AI ornament.
 
-The document is the visual center. Navigation supports writing; formatting appears when requested. A new launch starts with an empty editable document. Guides are available through the document menu.
+The document is the visual center. Navigation supports writing; formatting appears when requested. A first launch starts with an empty editable document; subsequent launches resume the prior session. Guides are available through the document menu.
 
 ## Workbench and typography
 
@@ -53,6 +53,9 @@ Use small, consistent radii: 6–8 DIP for controls and 12–14 DIP for floating
 - Files/Outline uses a 160 ms sliding indicator and a 120 ms content entrance. Outline rows align to the left and editing emphasizes the caret's current section. Read mode addresses reader anchors.
 - File-row close targets occupy a reserved 40 DIP area and fade in over 100 ms on the current/hovered row (always reachable without hover on touch). Context actions address that file; menus use MyGo's self-drawn presentation throughout.
 - A current-version save receives a quiet check and a two-second acknowledgment. New edits and failures override this feedback immediately; it never implies autosave or recovery.
+- Recovery prompts sit above the document with a quiet icon, clear explanation and a nearby save action. A changed or unavailable original offers Save a copy. The footer distinguishes Draft backed up from Saved locally.
+- Recent documents use a 560 DIP self-drawn dialog, searchable names and paths, 40 DIP actions, ellipsized long names and neutral hover transitions. Enter opens the first match; Escape returns to writing. Removing history never removes files.
+- The exit dialog offers Keep drafts, Save all, Discard and Cancel. Keep drafts writes the final checkpoint before closing; failure defaults to staying open. Modal presentation protects the editor while preserving its selection and return focus.
 - Follow system appearance has one full-row checkbox target.
 - Cmd/Ctrl+, opens Appearance, Cmd/Ctrl+Backslash toggles the sidebar, and Cmd/Ctrl+Shift+F enters or exits Focus.
 - New document always opens in editing mode, including from a reading view.
@@ -80,6 +83,16 @@ The interaction recording uses the actual application view and animation clock. 
 ![Current section in the outline](images/outline.png)
 
 ![Document context actions](images/document-menu.png)
+
+![Recovered draft ready for review](images/recovery/paper-recovered.png)
+
+![Recent documents in Graphite](images/recovery/graphite-recent.png)
+
+![Unavailable recent document in Warm paper](images/recovery/warm-missing.png)
+
+![Keep drafts before closing](images/recovery/paper-exit.png)
+
+![Recovery failure keeps the application open](images/recovery/graphite-exit-error.png)
 
 ## Verification
 

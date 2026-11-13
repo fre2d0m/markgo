@@ -20,6 +20,22 @@ Storage tests use temporary directories to verify bytes, CRLF, permissions, inva
 
 Run `go test ./internal/mdeditor -run '^$' -bench BenchmarkAnalyze -benchmem` to measure full-snapshot parser work. These measurements do not establish native input latency or large-document usability.
 
+## Recovery verification
+
+Recovery tests use temporary directories and immutable source captures. They cover named and untitled drafts, current selection, LF/CRLF and mixed endings, changed/missing originals, a disk save completed before the next checkpoint, repeated restoration, explicit discard, recent-history removal and failed or stale worker completions. Storage tests reject oversized, unsupported and malformed data without altering the last complete checkpoint, and exercise actual destination write failures.
+
+`TestRecoverySurvivesKilledProcess` starts a child test process, waits for a real checkpoint to finish, forcibly kills the process, restores both drafts, compares the original file bytes and repeats restoration without duplicates. `TestCrashBeforeAtomicReplacementPreservesPreviousCheckpoint` pauses a child immediately before atomic replacement, after syncing the temporary file, kills it, and verifies that the last complete checkpoint loads and the abandoned temporary file is cleaned. These tests do not prove recovery of uncommitted keystrokes, power-loss durability, real full-volume behavior or native window shutdown.
+
+UI tests check filtering, Enter-to-open, Escape-to-write, safe history removal, Keep drafts/Discard checkpoint content, cancellation and modal focus. A simulated disk-full completion verifies the persistent warning. Final exit publication still requires native event-loop acceptance.
+
+Capture the actual application view for visual inspection:
+
+```sh
+MARKGO_SCREENSHOT_DIR="$PWD/build/recovery-review" CGO_ENABLED=0 go test ./internal/app -run TestRecoveryScreenshots -count=1
+```
+
+This captures Paper, Warm paper and Graphite in recovery, recent, missing-file, empty, no-results, backup-error, conflicting-original, long-filename, exit and failed-exit states at 960 × 640, plus recovery/recent views at 1320 × 840. Inspect the images after each visible change and regenerate after fixes. The screenshots use fixture paths, not the user's writing library.
+
 ## Native verification
 
 Headless tests do not prove native window, font, input-method, clipboard, file-dialog, or GPU behavior. Changes in those areas require a real application run and platform-specific evidence. Record the operating system, architecture, and display scale; do not infer macOS or Linux behavior from Windows verification alone.
@@ -40,4 +56,4 @@ go tool mygo build
 - `make security`: Go vulnerability analysis.
 - `go tool mygo build`: the real application and platform packaging path.
 
-Build output stays under ignored `build/` directories and is not committed. Use `MARKGO_EPHEMERAL=1` when launching an isolated native check; it bypasses both native window state and appearance preferences. `go tool mygo build -skip-dmg` builds the macOS app bundle without producing a disk image. Headless screenshots are layout evidence only; label them accordingly. Temporary verification helpers live under ignored `.scratch/`; documentation screenshots are deliberate assets.
+Build output stays under ignored `build/` directories and is not committed. Use `MARKGO_EPHEMERAL=1` when launching an isolated native check; it bypasses native window state, appearance preferences, recovery, and recent documents. `go tool mygo build -skip-dmg` builds the macOS app bundle without producing a disk image. Headless screenshots are layout evidence only; label them accordingly. Temporary verification helpers live under ignored `.scratch/`; documentation screenshots are deliberate assets.

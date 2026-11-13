@@ -2,7 +2,7 @@
 
 ## Documents and folders
 
-MarkGo starts on a blank, focused document. Begin typing, or open the **Document menu** (the markgo wordmark and chevron at the top left) and choose **Open document…**. The plus beside Files creates another document. **Open a folder** at the foot of the sidebar shows Markdown files in a local folder and its subfolders. Built-in examples are available through **Document menu → Writing guide**. Filtering reveals matching files even inside collapsed folders; clearing the filter restores the previous expansion state. Use the refresh button after changing the folder outside MarkGo.
+MarkGo restores your previous documents and unfinished drafts. The first launch starts on a blank, focused document. Begin typing, or open the **Document menu** (the markgo wordmark and chevron at the top left) and choose **Open document…**. The plus beside Files creates another document. **Open a folder** at the foot of the sidebar shows Markdown files in a local folder and its subfolders. Built-in examples are available through **Document menu → Writing guide**. Filtering reveals matching files even inside collapsed folders; clearing the filter restores the previous expansion state. Use the refresh button after changing the folder outside MarkGo.
 
 In the open-document list, use the arrow keys, Home, and End to browse without losing list focus. Press Enter to begin writing in the selected document.
 
@@ -36,15 +36,27 @@ The title bar is drawn as part of the interface. Drag its empty space or documen
 
 ## Saving
 
-**Save** updates an opened file. New documents prompt for a location. **Save as** creates a separate file; choose an unused filename because it does not overwrite an existing destination. Closing a modified document offers save, discard, or cancel. Quitting offers to save all modified documents in sequence. Canceling or failing a save leaves the application open.
+**Save** updates an opened file. New documents prompt for a location. **Save as** creates a separate file; choose an unused filename because it does not overwrite an existing destination. Closing a modified document offers save, discard, or cancel. Quitting offers **Keep drafts**, **Save all**, **Discard**, or **Cancel**. Keep drafts remembers unfinished writing on this device without changing the original files. Save all saves modified documents in sequence. Canceling or failing a save leaves the application open.
 
 MarkGo checks the existing file before replacing it. If it changed outside the application, save is stopped and the editor keeps your changes. The warning offers **Reload** or **Keep editing**; keeping the buffer does not grant permission to overwrite the changed file. Save a copy if you want to retain both versions. Reload asks before discarding edits and rejects its result if the buffer changed while the file was being read.
 
 Saving preserves ordinary LF or CRLF line endings. An unchanged file with mixed endings retains its exact bytes. After editing mixed endings, **Save as** asks before creating a copy normalized to CRLF. The original file remains untouched.
 
-Saving is manual. There is no automatic save or crash recovery. New-file creation requires hard-link support on the destination filesystem. Symbolic links and non-UTF-8 files are not supported.
+Saving to your Markdown files is manual. Local recovery copies are managed separately, as described below. New-file creation requires hard-link support on the destination filesystem. Symbolic links and non-UTF-8 files are not supported.
 
 The footer briefly confirms **Saved just now** only after the current version finishes saving. A newer edit takes precedence and stays marked **Unsaved changes**.
+
+## Recovery and recent documents
+
+MarkGo keeps a separate recovery copy in `session.json` in the application's local data directory. It contains unfinished text and original disk bytes, along with document paths, the active document, editor positions, the open folder and view modes. Nothing is uploaded. This file is ordinary local data, not an encrypted vault or a version-history archive. Development builds use MyGo's separate development data directory.
+
+Checkpoints are scheduled 750 ms after changes pause, or after five seconds of continuous changes. Disk speed and an in-progress write can delay completion. **Draft backed up** confirms a completed checkpoint for the current buffer; it does not mean the Markdown file has been saved. A sudden interruption can lose edits made after the latest completed checkpoint. The retained checkpoint has a 64 MiB budget, including original text, and supports up to 100 open documents. Exceeding a limit or failing to write shows a persistent warning; existing recovery data is not silently truncated.
+
+On relaunch, **Recovered draft** marks unfinished work. Review it and choose **Save** when ready. If the original file changed or became unavailable, choose **Save a copy** to keep the recovered text without replacing another version. Clean documents reload their current disk contents. Undo history and the reader's scroll position are not restored.
+
+When closing the application, **Keep drafts** writes the current work before exiting, ready for the next launch. **Discard** removes the unsaved recovery content and reopens named files from disk next time; unnamed discarded drafts are not retained. Cancel leaves the writing session intact. If the final recovery write fails, **Stay open** is the default. **Exit anyway** leaves the older checkpoint in place and can lose newer text or bring back previously discarded text. An unreadable or unsupported recovery file is preserved untouched and automatic recovery writes remain disabled.
+
+Choose **Document menu → Recent documents…** to search up to 20 recent paths by filename or folder. Enter opens the first match; Tab reaches individual results and actions. Escape returns to writing. Unavailable files stay visible so you can retry or remove that history entry. **Clear history** removes the list, not files, open documents or drafts. This is not secure erasure of document contents. The list is remembered with the next completed checkpoint or normal exit.
 
 ## Keyboard shortcuts
 

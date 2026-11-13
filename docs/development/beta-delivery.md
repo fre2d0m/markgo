@@ -10,7 +10,7 @@ A quiet, fully drawn desktop Markdown editor that feels immediate, keeps ordinar
 
 | Area | Available foundation | Required before 1.0 beta |
 | --- | --- | --- |
-| Documents | Manual open/save/save-copy, folder browsing, external-change detection, unsaved close guards | Recent documents, restore the last session, recover untitled and unsaved work after a crash, optional guarded autosave |
+| Documents | Manual open/save/save-copy, folders, external-change guards, recent documents, session restore, local recovery and Keep drafts on exit | Optional guarded autosave; native recovery/exit acceptance, including OS shutdown and file-dialog cancellation |
 | Editing | One Markdown source buffer, supported syntax hiding, lists/tasks/quotes, undoable formatting, find/replace | Directly editable heading sizes, paragraphs, lists, quotes and code; continuous selection and undo across blocks; stable Chinese IME |
 | Images and tables | Formatted in Read mode | Local image insertion/paste/drop with relative paths; directly editable basic GFM tables and keyboard navigation |
 | Navigation | File list, folders, outline, focus mode | Reliable source/read positions, complete keyboard flow, purposeful empty/error/loading states, discoverable row actions |
@@ -33,9 +33,9 @@ Acceptance: a recorded, repeatable open → write → format → navigate → sa
 
 ### 2. Make unfinished writing safe
 
-Implement recovery before enabling automatic disk saving. Recovery snapshots live in the application data directory, separately from the user's Markdown files. Keep source, path and version together; use atomic writes and bounded retention. Recovered content opens for review and never silently replaces a changed disk file. Save/discard decisions must clean up only the corresponding recovered revision.
+Recovery, recent documents and session restoration are implemented with source/version and process-termination tests plus rendered UI evidence. Native OS shutdown, actual file-dialog interactions, and target-platform filesystem failures remain acceptance work. Implement opt-in automatic disk saving only after these recovery gates. Recovery snapshots live in the application data directory, separately from the user's Markdown files. Keep source, path and version together; use atomic writes and bounded retention. Recovered content opens for review and never silently replaces a changed disk file. Save/discard decisions must clean up only the corresponding recovered revision.
 
-Add recent documents and session restoration using real local paths, with graceful missing-file handling. Then add opt-in autosave for named files through the existing snapshot/conflict pipeline. Untitled documents remain recoverable drafts. A canceled dialog, full disk, permission failure, crash during a write, and an external editor changing the same file are required tests.
+Recent documents and session restoration use real local paths, with review and removal of unavailable entries. Next add opt-in autosave for named files through the existing snapshot/conflict pipeline. Untitled documents remain recoverable drafts. A canceled dialog, full disk, permission failure, crash during a write, and an external editor changing the same file are required tests.
 
 Acceptance: forcibly terminate a sandbox instance with both named and untitled changes; recover them on relaunch; verify disk bytes and repeat the recovery without duplicates. Normal close, explicit discard and later edits must each preserve the intended version.
 

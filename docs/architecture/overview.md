@@ -21,6 +21,7 @@ internal/storage
 - `internal/mdeditor` owns MyGo Markdown editor state, source-preserving parser analysis, outline and statistics, formatting, list continuation, and live-preview replacements.
 - `internal/storage` owns UTF-8 file snapshots, guarded saving, and recursive folder enumeration.
 - `internal/preferences` atomically writes small local settings. Appearance write revisions reject older workers that finish late; queued writes are drained after the event loop exits.
+- `internal/session` stores bounded recovery checkpoints atomically. The application holds immutable source snapshots, original disk bytes and buffer versions together, serializes them on a worker, and rejects stale write requests. Recent paths and session metadata share the same transaction.
 - `resources` contains assets loaded by MyGo packaging.
 
 Documents have stable identities independent of their names and paths. Each saved document has a disk snapshot with a content digest and permissions. Saves serialize immutable editor snapshots, write and sync a temporary file beside the destination, recheck the disk snapshot, and rename the temporary file. A concurrent external writer can still race the final check and rename; this is conflict detection, not filesystem locking. New files use an exclusive hard link of the completed temporary file and require filesystem support for hard links.
@@ -38,6 +39,10 @@ The editor normalizes CRLF in memory. Save snapshots reproduce the original line
 ## Execution model
 
 MyGo's window thread owns UI state. Views may rebuild several times for one event and must not perform slow I/O or start untracked background work. File operations, dialogs, folder scanning, and parser analysis run in guarded workers and publish results through `Window.Update`. Save metadata is prepared before the UI callback. The headless test path computes parser results synchronously because it has no native event loop.
+
+Appearance and session data load before the event loop starts. Normal launches request MyGo's single-instance lock before loading recovery state; subsequent launches forward their open requests. Recovery restores dirty buffers for review and only retains disk-save permission when the original bytes still match. A changed or unavailable original requires Save as. Clean documents are reloaded from disk rather than restored from stale text.
+
+Recovery is debounced for 750 ms and scheduled at least every five seconds of continuous changes, with one routine checkpoint in flight. Explicit discard and final exit writes receive newer revisions. The workbench waits for the final write before closing. Keep drafts retains unsaved sources; Discard strips them while retaining named document paths. Failed final writes offer staying open or an explicit exit with the older checkpoint left intact. Checkpoints do not persist undo history or reader scroll positions.
 
 Appearance settings load before the event loop starts. Theme and typography controls reuse persistent document state and cached editor/reader themes. A theme switch does not recreate a document or its image loader.
 
