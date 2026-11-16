@@ -1,6 +1,22 @@
 package mdeditor
 
-import "github.com/egoist/mygo/ui"
+import (
+	"github.com/egoist/mygo/ui"
+	"unicode/utf8"
+)
+
+// SetSearchMatch changes presentation only. Keeping the current match visible
+// while the search field has focus must not add rich formatting or source undo.
+func (t *Typesetter) SetSearchMatch(start, end int) {
+	a, z := 0, 0
+	if start >= 0 && end > start {
+		a, z = t.projection.viewOffset(start), t.projection.viewOffset(end)
+	}
+	if a != t.searchStart || z != t.searchEnd {
+		t.searchStart, t.searchEnd = a, z
+		t.searchVersion++
+	}
+}
 
 // One typography path for the editor and the OS text-service hit tester.
 func (t *Typesetter) styleSpans(p int, font ui.Font, spans []ui.Span, th *ui.Theme) []ui.Span {
@@ -33,5 +49,40 @@ func (t *Typesetter) styleSpans(p int, font ui.Font, spans []ui.Span, th *ui.The
 			}
 		}
 	}
-	return spans
+	if th == nil || !exists || t.searchEnd <= t.searchStart || t.searchEnd <= line.viewStart || t.searchStart >= line.viewStart+line.runes {
+		return spans
+	}
+	var highlighted []ui.Span
+	offset := line.viewStart
+	for _, s := range spans {
+		n := utf8.RuneCountInString(s.Text)
+		a, z := max(0, t.searchStart-offset), min(n, t.searchEnd-offset)
+		offset += n
+		if a >= z {
+			highlighted = append(highlighted, s)
+			continue
+		}
+		if s.PaddingX != 0 {
+			// An inline-code chip is one padded shape. Splitting it would
+			// duplicate padding and move text/caret geometry during search.
+			s.Background = th.Selection
+			highlighted = append(highlighted, s)
+			continue
+		}
+		left, right := runeByte(s.Text, a), runeByte(s.Text, z)
+		if left > 0 {
+			part := s
+			part.Text = s.Text[:left]
+			highlighted = append(highlighted, part)
+		}
+		part := s
+		part.Text, part.Background = s.Text[left:right], th.Selection
+		highlighted = append(highlighted, part)
+		if right < len(s.Text) {
+			part := s
+			part.Text = s.Text[right:]
+			highlighted = append(highlighted, part)
+		}
+	}
+	return highlighted
 }

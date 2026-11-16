@@ -38,15 +38,15 @@ A **free and open-source** Markdown editor for focused writing and clear thinkin
 MarkGo keeps your words in plain Markdown files. There is no account, no proprietary document format, and no required cloud service.
 
 - [x] Native interface drawn by MyGo
-- [x] Real editing with undo, search and multiple carets
-- [x] Live Markdown preview
+- [x] Direct editing with undo, search and multiple documents
+- [x] Source-preserving visual Markdown editing
 - [ ] Write your first note
 
 > The best writing tool gets out of the way until you need it.
 
 ## Try the editor
 
-Write **bold**, *italic*, or ` + "`inline code`" + ` text. Move the caret into formatted text to reveal its source. Use the sidebar to switch documents.
+Write **bold**, *italic*, or ` + "`inline code`" + ` text. Type / in an empty paragraph to insert a block. View options opens Markdown source or a reading view. Use the tabs or sidebar to switch documents.
 
 ` + "```go\nfunc main() {\n\tfmt.Println(\"Hello, MarkGo!\")\n}\n```" + `
 
@@ -57,13 +57,13 @@ const writingGuideDocument = `# Writing Guide
 
 ## Make room for your words
 
-Choose the half-filled circle in the header to open Appearance. Paper, Warm paper and Graphite change the whole interface. Adjust the text size, type and page width until the page feels comfortable. Your choices are remembered on this device.
+Choose the half-filled circle in the header to open Appearance. Twelve quiet themes include Paper, Warm paper, Sakura and Graphite. Adjust the text size, type and page width until the page feels comfortable. Your choices are remembered on this device.
 
 ## Start a document
 
-Use the plus beside Files, or press Cmd/Ctrl+N. Open an existing document from the three-dot document menu, or press Cmd/Ctrl+O. Open a folder from the foot of the sidebar.
+Use the plus after the tabs or beside Files, or press Cmd/Ctrl+N. Open an existing document from the MarkGo document menu, or press Cmd/Ctrl+O. Open a folder from the foot of the sidebar.
 
-Select a phrase and use Formatting for bold, italic, a link or inline code. H1 and H2 change the current heading. These actions can be undone with Cmd/Ctrl+Z.
+Select a phrase and use the toolbar for bold, italic, a link or inline code. Formatting changes block styles. In an empty paragraph, type / and filter with a word such as h2, code, 标题 or 待办. Choose with Up/Down and Enter; Escape keeps your text. These actions can be undone with Cmd/Ctrl+Z.
 
 ## Keep writing
 
@@ -75,7 +75,7 @@ Press Cmd/Ctrl+S to save. A new document asks for a location. The footer tells y
 
 ## Read and edit
 
-The book icon opens a formatted reading view. The pencil returns to editing. Tables and local images are formatted in reading mode; edit their Markdown in the writing view. The document menu can show all Markdown source marks.
+The book-shaped View options button offers Visual editing, Markdown source and Reading view. Visual editing is the default; supported headings, lists and formatting remain editable in place. Tables and local images are formatted in reading mode and remain literal Markdown in visual editing. Cmd/Ctrl+Shift+M switches visual editing and source.
 
 ### Shortcuts
 

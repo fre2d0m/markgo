@@ -217,6 +217,9 @@ func (a *App) recoveryDue(now time.Time) (time.Duration, bool) {
 }
 
 func (a *App) captureRecovery(discard bool) recoveryCapture {
+	if w := a.writers[a.activeWriter]; w != nil {
+		w.SyncSelection()
+	}
 	state := session.State{Schema: session.SchemaVersion, Active: a.selected, Recent: slices.Clone(a.recent),
 		Sidebar: a.sidebar, Reading: a.reading, Source: !a.preview, Outline: a.sideView == 1}
 	if a.folder != nil {

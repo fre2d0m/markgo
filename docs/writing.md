@@ -18,13 +18,15 @@ Read-mode anchors currently choose the first matching title when headings repeat
 
 ## Writing and reading
 
-Live preview keeps a single editable Markdown buffer and hides supported syntax when the caret is outside the formatted element. Moving into it reveals the original marks. **Document menu → Show Markdown source** toggles all marks. Task checkboxes update the Markdown source and can be undone.
+Documents open in **Visual editing**. Headings, paragraphs, ordinary lists and tasks, simple quotations, fenced code, bold/italic/strikethrough, inline code and links are editable in their formatted presentation. Moving the caret into supported text keeps that presentation. Every change updates the same Markdown source and undo history.
 
-**Read** in the page toolbar displays native Markdown typography, tables, code blocks, and local images. Choose **Write** to change the source. Tables and images are not directly editable in the reading view. Formulas remain TeX text. Remote images are not automatically fetched; local image paths are resolved relative to the saved document.
+The book-shaped **View options** button, or **Document menu → View**, offers **Visual editing**, **Markdown source** and **Reading view**. Cmd/Ctrl+Shift+M switches visual editing and source. Reading is an optional read-only page that also displays tables and local images; **Return to writing** resumes editing. Images, tables, front matter and more complex Markdown remain literal source in visual editing. Formulas remain TeX text. Remote images are not automatically fetched; local image paths resolve relative to the saved document.
 
-The page toolbar puts bold, italic, inline code and links within reach. **Formatting** at its right opens labeled heading, list and quote actions. Formatting works on one selection or the current line and returns focus to writing; the floating panel closes after an action. Ordinary bullet and numbered lists, tasks, and quotes continue with Return. A second Return on an empty item exits that item. Four-space and tab-indented lines keep normal editor behavior, as do fenced code, comments, and multiple selections. Shift+Return always uses the editor's ordinary newline action.
+Type **/** in an empty ordinary paragraph to insert a paragraph, heading 1–3, bullet list, numbered list, task list, quote or code block. Continue typing a Chinese or English keyword, such as **标题**, **待办**, **h2** or **code**, to filter. Up/Down chooses a result, Enter or Tab applies it, and Escape dismisses the menu while retaining your input. One Undo restores the complete slash query. Pasting a path or typing inside code does not open the menu. A quiet hint appears only on the focused empty paragraph.
 
-**Find** opens document search. Its options include case matching, whole words, regular expressions, and selection scope. Choose **Replace** to show the replacement field. Replacing all matches is one undoable edit. Escape closes search and restores writing focus.
+The page toolbar keeps bold, italic, inline code and links within reach. **Formatting** at its right opens the block styles. Formatting returns focus to writing; the panel closes after an action. Ordinary lists, tasks and quotes continue with Return; Return in an empty item exits one level. Tab/Shift+Tab changes list or quote nesting. Fenced code retains indentation and has language, Copy and Continue controls. Inline commands work within a physical paragraph; unsupported or ambiguous selections produce an explanation without changing the document.
+
+**Find** searches the Markdown source while keeping visual editing open. Its panel sits above the page and the current visible match stays highlighted while you type the query. Its options include case matching, whole words, regular expressions, and selection scope. Select a passage before opening Find to limit the scope; the scope follows subsequent edits. If a change crosses its boundaries, select the passage again and reopen Find. Choose **Replace** to show the replacement field. Replacing all matches is one undoable edit. Escape closes search and restores writing focus. Source syntax is searchable even where its marks are hidden in the formatted page.
 
 ## Appearance and focus
 
@@ -56,7 +58,7 @@ MarkGo keeps a separate recovery copy in `session.json` in the application's loc
 
 Checkpoints are scheduled 750 ms after changes pause, or after five seconds of continuous changes. Disk speed and an in-progress write can delay completion. **Draft backed up** confirms a completed checkpoint for the current buffer; it does not mean the Markdown file has been saved. A sudden interruption can lose edits made after the latest completed checkpoint. The retained checkpoint has a 64 MiB budget, including original text, and supports up to 100 open documents. Exceeding a limit or failing to write shows a persistent warning; existing recovery data is not silently truncated.
 
-On relaunch, **Recovered draft** marks unfinished work. Review it and choose **Save** when ready. If the original file changed or became unavailable, choose **Save a copy** to keep the recovered text without replacing another version. Clean documents reload their current disk contents. Undo history and the reader's scroll position are not restored.
+On relaunch, **Recovered draft** marks unfinished work. Review it and choose **Save** when ready. If the original file changed or became unavailable, choose **Save a copy** to keep the recovered text without replacing another version. Clean documents reload their current disk contents. The active document, view choice and caret/selection are restored. Undo history and exact visual/reading scroll positions are not restored across relaunches; tab switches within the running app retain the visual viewport.
 
 When closing the application, **Keep drafts** writes the current work before exiting, ready for the next launch. **Discard** removes the unsaved recovery content and reopens named files from disk next time; unnamed discarded drafts are not retained. Cancel leaves the writing session intact. If the final recovery write fails, **Stay open** is the default. **Exit anyway** leaves the older checkpoint in place and can lose newer text or bring back previously discarded text. An unreadable or unsupported recovery file is preserved untouched and automatic recovery writes remain disabled.
 
@@ -76,10 +78,14 @@ Use Command on macOS and Control on Windows/Linux for the shortcuts below.
 | Next / previous document | Control+Tab / Control+Shift+Tab on all platforms |
 | Find | Cmd/Ctrl+F |
 | Bold / italic | Cmd/Ctrl+B / I |
-| Heading 1 / 2 | Cmd/Ctrl+1 / 2 |
+| Paragraph / heading 1–3 | Cmd/Ctrl+0 / 1 / 2 / 3 in visual editing |
+| Block menu | / in an empty ordinary paragraph |
+| Visual editing / source | Cmd/Ctrl+Shift+M |
+| Bullets / numbers / tasks | Cmd/Ctrl+Shift+8 / 7 / 9 in visual editing |
+| Link | Cmd/Ctrl+K in visual editing |
 | Undo | Cmd/Ctrl+Z |
 | Focus mode | Cmd/Ctrl+Shift+F |
 | Appearance | Cmd/Ctrl+, |
 | Toggle sidebar | Cmd/Ctrl+Backslash |
 
-The editor also supplies platform-native selection, clipboard, redo, multi-caret, and navigation shortcuts.
+The editor also supplies platform-native selection, clipboard, redo and navigation shortcuts. Multiple carets are available in Markdown source; visual editing uses one continuous selection.

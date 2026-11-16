@@ -1,6 +1,8 @@
 # Native typesetting checkpoint
 
-This is an isolated, runnable editing experiment, not a 1.0 beta release or the default document editor. It opens built-in samples and new in-memory pages only. Changes stay in memory and closing the preview discards them. It has no file associations, open/save callbacks, recovery store, appearance store or single-instance handoff.
+The source-preserving Typesetter is now the default editor for ordinary documents. The [visual-writing integration](visual-writing.md) connects files, tabs, save/recovery, outline, search and slash insertion. This is not a 1.0 beta release; native-platform acceptance and directly editable images/tables remain pending.
+
+The separate **MarkGo Writing Preview** executable still opens built-in samples and new in-memory pages only. Closing that preview discards its edits. It has no file associations, open/save callbacks, recovery store, appearance store or single-instance handoff.
 
 ## Try it
 
@@ -10,7 +12,7 @@ go tool mygo build -skip-dmg ./cmd/markgo-preview
 go tool mygo build -platform windows/amd64 -skip-installer ./cmd/markgo-preview
 ```
 
-The standalone application is **MarkGo Writing Preview**, under `build/typesetting-preview/`. The ordinary MarkGo executable also accepts `--typesetting-preview` as its first argument, before any real workspace initialization. Normal launches retain the existing editor.
+The standalone application is **MarkGo Writing Preview**, under `build/typesetting-preview/`. The ordinary MarkGo executable also accepts `--typesetting-preview` as its first argument, before any real workspace initialization. Normal launches use visual editing with the real workspace and its existing save/recovery guards.
 
 The shared workbench includes document tabs and a page toolbar. Closing a sample tab keeps its edits available in Sample pages; the plus creates an in-memory page, never a real file. Ctrl+Tab cycles open pages. Edit the English or Chinese sample directly. Drag from a heading into a paragraph, replace the selection, undo, switch to Source, type, switch back, and undo again. The Blank page and Long read samples exercise the same editor. `Cmd/Ctrl+Shift+M` switches views; `Cmd/Ctrl+0/1/2/3` applies a paragraph or heading. Appearance and sample-sidebar controls retain the writing selection. Switching views or pages cancels unfinished composition and restores the original selection with an explanatory notice.
 
@@ -187,6 +189,6 @@ Raw [inline baseline](benchmarks/inlines-2026-11-13-before.txt) and [inline chec
 - Structured presentation covers top-level ATX headings, ordinary lists/tasks, simple quotations (up to eight levels), top-level fenced code, emphasis/strong/strike, single-line inline code and explicit/reference links. Optional closing heading marks, quoted lists/headings/code, alerts, indented code, compact same-line nesting, block-first complex items, front matter, images and tables remain literal Markdown. Code wraps and uses neutral monospace text; syntax highlighting and horizontal code scrolling are not implemented.
 - Inline commands operate within one physical paragraph; selections crossing half of another format explain the boundary. Existing multiline emphasis is displayed, but multiline inline code/links, automatic URL opening, decoded escape/entity presentation and advanced link syntax editing remain source operations. Original bytes are retained when these forms are left unchanged.
 - Physical source lines remain separate display paragraphs; soft-line-break paragraph fusion and blank-line spacing need a deliberate model before expanding block support.
-- Incremental projection and retained layout now reduce ordinary typing costs. Full-string snapshots, offset updates, native text-service range queries, long single-paragraph behavior and sustained live-heap use still need profiling. Precise paragraph anchoring across mode switches, native text-service hit testing, multi-line preedit and actual desktop input latency remain integration gates.
-- Current history is in memory; this preview does not save or recover edits. The production editor's recovery implementation is separate and unchanged.
-- Next: image insertion and basic GFM table editing through the same source model. Native Windows/macOS IME and selection acceptance remains required before integration with ordinary documents. Export follows the [beta delivery plan](beta-delivery.md). Do not promote this adapter to ordinary files just because the sample looks finished.
+- Incremental projection and retained layout reduce ordinary typing costs. Full-string snapshots, offset updates, native text-service range queries, long single-paragraph behavior and sustained live-heap use still need profiling. Rich viewports survive tab/source switches in process; exact pixel scrolling is not restored after relaunch. Native text-service hit testing, multi-line preedit and actual desktop latency remain release gates.
+- Undo history remains in memory. The main editor saves/recoveries canonical source through the existing storage lifecycle; the separate preview intentionally has no persistence.
+- Next: image insertion and basic GFM table editing through the same source model. Native Windows/macOS IME and selection acceptance remains required before release. Export follows the [beta delivery plan](beta-delivery.md). Integration, builds and headless screenshots do not establish beta readiness.

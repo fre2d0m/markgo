@@ -210,7 +210,7 @@ func TestDocumentMenuTargetsAndKeyboardDismissal(t *testing.T) {
 	tt.Type("A thought.")
 	click(t, tt, "Document menu")
 	tt.Advance(200 * time.Millisecond)
-	for _, label := range []string{"New document", "Open document…", "Recent documents…", "Open folder…", "Save", "Save as…", "Close document", "Show Markdown source", "Writing guide"} {
+	for _, label := range []string{"New document", "Open document…", "Recent documents…", "Open folder…", "Save", "Save as…", "Close document", "View", "Writing guide"} {
 		r, ok := tt.Find(label)
 		if !ok || r.H < 40 || r.X < 0 || r.Y < 0 || r.Y+r.H > 640 {
 			t.Fatalf("menu target %s: %+v", label, r)

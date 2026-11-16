@@ -2,7 +2,6 @@ package app
 
 import (
 	"github.com/egoist/mygo/ui"
-	"github.com/egoist/mygo/ui/editor"
 	"github.com/xddcode/markgo/internal/mdeditor"
 	"github.com/xddcode/markgo/internal/writingui"
 	"time"
@@ -26,7 +25,7 @@ func (a *App) header(c *ui.Context) {
 					ui.Icon(c, icons["chevron"]).Size(12, 12).TextColor(t.TextMuted)
 				})
 			})
-			button.PopoverMenuButton(a.documentMenu, ui.PopoverMenuButtonOptions{Panel: func(panel ui.Element) { writingui.Surface(c, panel).Padding(8) }})
+			button.ObserveInput(a.endCompositionBeforePointer).PopoverMenuButton(a.documentMenu, ui.PopoverMenuButtonOptions{Panel: func(panel ui.Element) { writingui.Surface(c, panel).Padding(8) }})
 			ui.Spacer(c)
 			iconButton(c, "sidebar", "sidebar", "Toggle file sidebar").OnClick(func() {
 				a.sidebar = !a.sidebar
@@ -39,7 +38,7 @@ func (a *App) header(c *ui.Context) {
 		services := c.Services()
 		documentTabs(c, &a.tabs, a.files, a.selected, a.fileBusy, a.selectDocument, a.closeDocument, a.newDocument, func(menu *ui.Menu, file *mdeditor.File) { a.fileMenu(services, menu, file) })
 		ui.Row(c.Key("window-tools")).Shrink(0).PaddingStart(8).Gap(2).AlignItems(ui.Center).Children(func() {
-			iconButton(c, "find", "search", "Find in document").OnClick(func() { a.reading = false; file.State.Run(editor.Find) })
+			iconButton(c, "find", "search", "Find in document").OnClick(a.openFind)
 			iconButton(c, "focus", "focus", "Focus mode").OnClick(func() {
 				a.focusMode = true
 				if !a.reading {
@@ -64,34 +63,29 @@ func (a *App) header(c *ui.Context) {
 func (a *App) documentToolbar(c *ui.Context, file *mdeditor.File) {
 	t := c.Theme()
 	pageToolbar(c.Key("document-toolbar")).Gap(12).Children(func() {
-		ui.Row(c.Key("writing-mode")).Height(44).Padding(2).Gap(2).Radius(10).Background(t.Surface).Shrink(0).Children(func() {
-			for _, mode := range []struct {
-				label, name string
-				reading     bool
-			}{{"Edit document", "Write", false}, {"Read document", "Read", true}} {
-				button := appearanceSegment(c.Key(mode.name), mode.label, a.reading == mode.reading).Width(62)
-				button.Children(func() { ui.Text(c, mode.name).FontSize(12).FontWeight(500) })
-				button.OnClick(func() {
-					a.reading = mode.reading
-					if !a.reading {
-						file.Focus.Focus(c)
-					}
-				})
-			}
-		})
 		if !a.reading {
-			ui.Box(c).Size(1, 20).Background(t.Border)
 			ui.Row(c.Key("quick-formatting")).Width(166).Shrink(0).Children(func() { a.editorToolbar(c, file) })
+			if !a.preview {
+				ui.Text(c, "Markdown source").FontSize(12).TextColor(t.TextMuted)
+			}
+		} else {
+			writingui.Button(c, "Return to writing", false).OnClick(func() { a.setWritingMode(true, false) })
 		}
 		ui.Spacer(c)
+		iconButton(c, "view", "read", "View options").ObserveInput(a.endCompositionBeforePointer).PopoverMenuButton(a.viewMenu, ui.PopoverMenuButtonOptions{Panel: func(panel ui.Element) { writingui.Surface(c, panel).Padding(8) }})
 		format := stateIconButton(c, "format", "more", "Formatting", a.formatOpen)
 		if format.Clicked() {
+			if a.reading {
+				a.setWritingMode(true, false)
+			}
 			a.formatOpen = !a.formatOpen
 			a.appearanceOpen = false
 			a.reading = false
 		}
 		ui.PopoverBase(c, format, &a.formatOpen, func(panel ui.Element) {
-			writingui.Surface(c, panel).Width(248).Padding(8).Margin(8, 0, 0).Children(func() { a.blockFormatting(c, file) })
+			writingui.Surface(c, panel).Width(248).Padding(8).Margin(8, 0, 0).Children(func() {
+				ui.Scroll(c).FillWidth().MaxHeight(408).Children(func() { a.blockFormatting(c, file) })
+			})
 		})
 	})
 	pageToolbarDivider(c)
@@ -122,10 +116,11 @@ func (a *App) documentMenu(m *ui.Menu) {
 		a.closeDocument(a.current())
 	}
 	m.Separator()
-	if writingui.MenuItem(m, "Show Markdown source").Checked(!a.preview).Chosen() {
-		a.preview = !a.preview
-		a.reading = false
-	}
+	m.Submenu("View", a.viewMenu).Content(func(content ui.MenuItemContent) {
+		ui.Column(content.Context).MinHeight(28).Justify(ui.Center).Children(func() {
+			ui.Text(content.Context, "View").FontSize(13)
+		})
+	})
 	m.Separator()
 	if writingui.MenuItem(m, "Writing guide").Chosen() {
 		a.openGuides()
@@ -187,7 +182,7 @@ func (a *App) documentList(c *ui.Context) {
 	listTheme := *t
 	listTheme.AccentText = t.Text
 	listTheme.SurfacePressed = t.Background
-	listScope := ui.Themed(c, &listTheme).Background(t.Surface).MinHeight(0)
+	listScope := ui.Themed(c, &listTheme).Background(t.Surface).MinHeight(0).ObserveInput(a.endCompositionBeforePointer)
 	if a.folder == nil {
 		listScope.Grow(1)
 	} else {

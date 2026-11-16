@@ -58,7 +58,7 @@ func documentTabs(c *ui.Context, state *documentTabState, files []*mdeditor.File
 					// when another document is inserted or closed before it.
 					ui.Row(c.Key(file.ID)).Shrink(0).Children(func() {
 						active := file.ID == selected
-						tab := tabs.Tab(i).Width(documentTabWidth).Height(documentTabHeight).Padding(0, 4, 0, 12).Gap(8).AlignItems(ui.Center).Radius(8, 8, 0, 0).Label("Tab " + file.Name)
+						tab := tabs.Tab(i).KeepFocus().Width(documentTabWidth).Height(documentTabHeight).Padding(0, 4, 0, 12).Gap(8).AlignItems(ui.Center).Radius(8, 8, 0, 0).Label("Tab " + file.Name)
 						path := file.Path
 						if path == "" {
 							path = file.Name

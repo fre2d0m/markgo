@@ -40,6 +40,10 @@ This captures Paper, Warm paper and Graphite in recovery, recent, missing-file, 
 
 ## Native verification
 
+`TestVisualDocumentSaveRecoveryAndSourceRoundTrip` edits a temporary real CRLF document through the main visual editor and slash menu, restores a checkpoint, saves the immutable snapshot and reopens/compares disk bytes. Visual tab tests inspect rich-text paragraph geometry after actual headless scrolling, rather than checking only the unused source editor's scroll field. Find tests cover Unicode, regex replacement, scope tracking through edits/undo and tab isolation. Navigation tests exercise preedit cancellation before focus loss, including the sidebar, tab strip and View menu. Closing the final clean tab must start a fresh editable document.
+
+Capture the integrated main view with `MARKGO_SCREENSHOT_DIR="$PWD/build/visual-writing-review" CGO_ENABLED=0 go test ./internal/app -run TestVisualWritingScreenshots -count=1`. Inspect normal, blank, slash, filtered, empty-result, bottom-caret, source, View menu, search-error/replacement, code and link states in Paper, Sakura and Graphite. Geometry tests cover 1×/1.5×/2× scale, 40 DIP actions, whole rows, pointer cancellation and caret-safe popup placement at 960 × 640. These remain headless layout and behavior evidence.
+
 Headless tests do not prove native window, font, input-method, clipboard, file-dialog, or GPU behavior. Changes in those areas require a real application run and platform-specific evidence. Record the operating system, architecture, and display scale; do not infer macOS or Linux behavior from Windows verification alone.
 
 For the custom title bar, check dragging from blank areas, and verify document tabs do not initiate a window drag, double-click maximize/restore, all resize edges, minimize/restore, maximize icon changes, and close with unsaved text. On Windows 11, check Snap layouts over the maximize button and at 100%, 150%, and 200% display scaling. In Focus mode the window buttons must remain reachable. Clicking or dragging a writing control must not drag the window. Neither a compiled executable nor a headless render establishes those OS behaviors.

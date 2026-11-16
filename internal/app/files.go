@@ -176,6 +176,9 @@ func (a *App) saveAllAndExit(quit bool) {
 }
 
 func (a *App) newDocument() {
+	if len(a.files) > 0 {
+		a.flushWriting(a.current())
+	}
 	a.reading, a.formatOpen, a.appearanceOpen = false, false, false
 	a.query = ""
 	a.nextID++
@@ -191,6 +194,7 @@ func (a *App) closeDocument(file *mdeditor.File) {
 	if a.fileBusy {
 		return
 	}
+	a.flushWriting(file)
 	if !file.Modified() {
 		a.removeDocument(file.ID)
 		return
@@ -234,6 +238,7 @@ func (a *App) removeDocument(id string) {
 		a.files = append(a.files[:index], a.files[index+1:]...)
 		delete(a.disk, id)
 		delete(a.analyses, id)
+		delete(a.writers, id)
 		delete(a.conflicts, id)
 		delete(a.checking, id)
 		delete(a.savedEvents, id)
@@ -353,6 +358,10 @@ func (a *App) saveDocument(saveAs bool) {
 func (a *App) saveFile(file *mdeditor.File, saveAs bool, onSaved func()) {
 	if a.window == nil || a.fileBusy {
 		return
+	}
+	// Save committed source without cancelling a live input-method candidate.
+	if w := a.writers[file.ID]; w != nil && a.activeWriter == file.ID {
+		w.SyncSelection()
 	}
 	fileID := file.ID
 	defaultName := file.Name
