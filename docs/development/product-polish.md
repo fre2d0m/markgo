@@ -11,6 +11,7 @@ This pass concentrates on the existing native interface. It retains the latest a
 | Document tabs | Open files discoverable only in the sidebar | Full-height 172 × 48 DIP tabs with close/dirty feedback, full-path tooltips, context actions, new document and a bounded overflow menu; duplicate names include folders |
 | Tab navigation | No visible tab navigation | Ctrl+Tab cycling, automatic reveal after navigation/resizing, independent selection/scroll/undo and existing unsaved-close guards; preview sample tabs reopen with edits intact |
 | Page toolbar | All writing actions lived in the title bar or popovers | Write/Read or Typeset/Source beside directly reachable formatting, with labeled paragraph actions instead of a duplicate icon strip, detailed popovers and uncluttered global actions |
+| Toolbar alignment | Main and preview toolbars used different heights and insets; full-width rules plus margins extended past the page | Shared 52 DIP frame, 20 DIP horizontal inset, balanced 4 DIP vertical padding and an inset divider contained within both paper edges; existing 40 DIP targets and tool groups retained |
 | Theme catalog | Three themes; preference/native appearance switches maintained separate ID lists | Twelve complete palettes; one catalog resolves persistence and OS light/dark appearance |
 | Contrast | Secondary ink could become too faint on pressed surfaces; several theme-dependent widget colors inherited OS defaults | Text/secondary ink verified at 4.5:1 or higher on page, rail, hover and pressed surfaces; primary, focus and semantic colors checked too; tooltips and scrollbars use resolved palette colors |
 | Appearance gallery | Three tall cards and unrelated typography buttons | Four columns of compact paper samples, a selected check, current theme name, explicit close action and recessed typeface/width segments |
@@ -41,6 +42,14 @@ This pass concentrates on the existing native interface. It retains the latest a
 
 ![Multi-document editing workspace](../design/images/polish/workspace-editing.png)
 
+## Toolbar alignment verification
+
+The workbench editing/reading images and Sakura writing image above were refreshed for the toolbar alignment fix. The tab geometry remains the full-height design with square lower corners. The comparison below enlarges the actual rendered right edge: the divider now stops inside the paper instead of crossing the outer gutter.
+
+![Toolbar divider before and after](../design/images/polish/toolbar-divider.png)
+
+This follow-up reran the Go/MyGo static checks, the full Go test suite, and 353 workbench, gallery, scale and typesetting renders. Pixel comparisons checked both divider endpoints and the outer gutter in 108 unobscured main/preview scenes across all twelve themes. Visual inspection covered the toolbar in all themes, minimum-size editing, empty editing and preview error feedback. The macOS arm64 Writing Preview bundle built successfully. These are headless rendering and build results; the desktop tool still required the preview application to be opened on the host, so native acceptance remains outstanding.
+
 ## Reproduce rendered evidence
 
 Run these with separate destinations so similarly named recovery and preview scenes cannot overwrite each other:
@@ -54,7 +63,7 @@ MARKGO_SCREENSHOT_DIR="$PWD/build/product-polish-review/rendered" CGO_ENABLED=0 
 MARKGO_SCREENSHOT_DIR="$PWD/build/product-polish-review" CGO_ENABLED=0 go test ./internal/app -run '^TestProductPolishMotion$' -count=1
 ```
 
-The 389 rendered screenshots include all twelve palettes in thirteen gallery scenes: Chinese writing, appearance, maximum Book typography, ordinary editing, reading, find/replace, empty editing, outline, formatting, ordinary-app appearance, focus, document menu and empty recent history. The preview matrix covers 47 editing/overlay/error scenes in Paper, Warm paper and Graphite. Recovery covers its normal, empty, unavailable, conflict and exit/failure flows. Forty-eight multi-document views cover writing, reading, the minimum window and 24 open tabs in every theme. Eight additional renders inspect controls at 1.5× and 2× scale; a 50-frame recording shows actual UI transitions. Layout tests verify the theme controls at 1×, 1.5× and 2×, including non-overlapping targets at 960 × 640.
+The original full polish pass produced 389 rendered screenshots, including all twelve palettes in thirteen gallery scenes: Chinese writing, appearance, maximum Book typography, ordinary editing, reading, find/replace, empty editing, outline, formatting, ordinary-app appearance, focus, document menu and empty recent history. The preview matrix covers 47 editing/overlay/error scenes in Paper, Warm paper and Graphite. Recovery covers its normal, empty, unavailable, conflict and exit/failure flows. Forty-eight multi-document views cover writing, reading, the minimum window and 24 open tabs in every theme. Eight additional renders inspect controls at 1.5× and 2× scale; a 50-frame recording shows actual UI transitions. Layout tests verify the theme controls at 1×, 1.5× and 2×, including non-overlapping targets at 960 × 640.
 
 Behavior regressions check every palette's persisted settings and native appearance selection, source/selection/scroll preservation, pointer cancellation, keyboard activation, Escape/close focus, interrupted panels, undo, field-specific link validation, independent tab histories, guarded closing, overflow keyboard access, resizing and reopening edited preview samples. No fixture touches real user documents or preference stores.
 

@@ -174,7 +174,7 @@ func (p *TypesettingPreview) View(c *ui.Context) {
 func (p *TypesettingPreview) writingToolbar(c *ui.Context) {
 	t, a := c.Theme(), p.shell
 	page := p.current()
-	ui.Row(c.Key("preview-toolbar")).FillWidth().Height(56).Padding(6, 16).Gap(8).AlignItems(ui.Center).Children(func() {
+	pageToolbar(c.Key("preview-toolbar")).Gap(8).Children(func() {
 		ui.Row(c.Key("view-modes")).Height(44).Shrink(0).Padding(2).Radius(10).Background(t.Surface).Gap(2).AlignItems(ui.Center).Children(func() {
 			for _, mode := range []struct {
 				label  string
@@ -301,7 +301,7 @@ func (p *TypesettingPreview) writingToolbar(c *ui.Context) {
 		}
 		ui.Spacer(c)
 	})
-	ui.Box(c).FillWidth().Height(1).MarginX(16).Background(t.Border.Alpha(0.55))
+	pageToolbarDivider(c)
 }
 
 func (p *TypesettingPreview) quickFormatting(c *ui.Context) {
