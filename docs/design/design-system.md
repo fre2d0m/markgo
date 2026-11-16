@@ -13,7 +13,7 @@ Updated 2026-11-16. [DESIGN.md](../../DESIGN.md) is the authority; this is an im
 | Files | Worker I/O, guarded snapshot saves, exclusive Save-as, undoable stale-checked reload, ordered bounded recovery and explicit exit decisions |
 | Search/reading | Case/word/regex/scope search above the page; native tables/local images in optional reading; rendered source anchors |
 | Menus | 304 DIP view/format/document popovers; 360 DIP document switcher with 56 DIP file rows; 400 DIP recent list. 8 DIP padding, 40 DIP command rows, 2 DIP gaps, fixed icon/label/shortcut columns; outside dismissal and Escape restore writing |
-| Feedback | Icon controls: 100 ms hover color, 90 ms glyph press to 0.96 with a fixed 40 DIP target. Floating surfaces: 130 ms entry with at most 4 DIP movement; 90 ms departure with at most 2 DIP movement. Closing disables panel actions immediately and allows writing and reopening. Reduced motion resolves immediately; no animated prose |
+| Feedback | Icon controls: 100 ms hover color, 90 ms glyph press to 0.96 with a fixed 40 DIP target. Floating surfaces: 130 ms entry with at most 4 DIP movement; 90 ms departure with at most 2 DIP movement. Closing disables panel actions immediately and allows writing and reopening. Reduced motion removes movement/scaling and resolves colors immediately; no animated prose |
 | Windows UI font | Microsoft YaHei UI when installed, otherwise Segoe UI; separate from the user's prose font preference |
 
 Sources: [workbench/views](../../src/desktop/views.rs), [writer](../../src/desktop/writer.rs), [themes](../../src/desktop/theme.rs), [projection](../../src/projection.rs), [recovery](../../src/desktop/recovery.rs).

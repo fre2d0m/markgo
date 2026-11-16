@@ -78,7 +78,7 @@ impl RenderOnce for IconButton {
         );
         let scale = motion::transition(
             channel("press"),
-            if pressed && !self.disabled {
+            if pressed && !self.disabled && !cx.reduce_motion() {
                 0.96_f32
             } else {
                 1.

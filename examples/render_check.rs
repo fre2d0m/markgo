@@ -402,6 +402,13 @@ fn workbench_motion(output: &str) {
     .unwrap();
     cx.advance_clock(Duration::from_millis(100));
     save_screenshot(&mut cx, handle, format!("{output}/button-pressed.png"));
+    cx.update(|c| c.set_reduce_motion(true));
+    save_screenshot(
+        &mut cx,
+        handle,
+        format!("{output}/button-reduced-pressed.png"),
+    );
+    cx.update(|c| c.set_reduce_motion(false));
     cx.update_window(handle, |_, w, c| {
         assert_eq!(w.find("bold").bounds(), target);
         let outside = point(px(180.), px(600.));
