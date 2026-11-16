@@ -12,6 +12,8 @@ The application accepts command-line paths, OS file requests and dropped files/f
 
 Type ordinary Markdown. Top-level ATX headings, bold/italic/strike/code/links appear formatted; lists/tasks have hanging indents, quotes a quiet rule and top-level fences a code header. Untouched source bytes retain their marker spelling and line endings. Tables, images, metadata and unsupported complex structures remain literal in direct editing.
 
+At the start of a paragraph, `#` through `######` remain visible while you type. A following space converts them into a heading. Backspace at the beginning of a heading returns it to an ordinary paragraph; Undo restores the heading. Hashes inside prose or code remain literal.
+
 Type `/` in an empty paragraph for formats. Chinese/English search, arrows, Enter/Tab and pointer choice are supported. Escape retains literal input; pasted paths/code and unfinished composition do not trigger it.
 
 Enter continues list/task/quote structure; empty entries exit or reduce nesting. Tab/Shift+Tab indents/outdents. Task controls or Cmd/Ctrl+Enter toggle completion. Code tools set language, copy body or continue below. Literal closing fences entered into code extend paired delimiters.

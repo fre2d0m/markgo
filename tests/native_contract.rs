@@ -50,12 +50,56 @@ fn composition_expansion_retains_surrounding_source_until_commit() {
 }
 #[test]
 fn composition_into_empty_heading_keeps_valid_markdown() {
-    let mut e = Editor::new("###");
+    let mut e = Editor::new("### ");
     e.mark(None, "标题", None).unwrap();
     e.commit_composition(None).unwrap();
     assert_eq!(e.document.source(), "### 标题");
     e.undo();
-    assert_eq!(e.document.source(), "###");
+    assert_eq!(e.document.source(), "### ");
+}
+
+#[test]
+fn typing_heading_markers_waits_for_space_and_backspace_exits() {
+    for level in 1..=6 {
+        let mut e = Editor::new("");
+        for count in 1..=level {
+            e.insert("#").unwrap();
+            assert_eq!(e.text(), "#".repeat(count));
+            assert_eq!(e.selection(), Selection::caret(count));
+            assert_eq!(e.heading_at(count), 0);
+        }
+        e.insert(" ").unwrap();
+        assert_eq!(e.text(), "");
+        assert_eq!(e.heading_at(0), level as u8);
+        let source = e.document.source().to_owned();
+        e.delete(false);
+        assert_eq!(e.document.source(), "");
+        e.undo();
+        assert_eq!(e.document.source(), source);
+        e.insert("标题 👩‍💻").unwrap();
+        assert_eq!(e.text(), "标题 👩‍💻");
+        e.select(Selection::caret(0)).unwrap();
+        e.delete(false);
+        assert_eq!(e.document.source(), "标题 👩‍💻");
+        e.undo();
+        assert_eq!(e.text(), "标题 👩‍💻");
+        assert_eq!(e.heading_at(0), level as u8);
+    }
+}
+
+#[test]
+fn hashes_in_prose_and_code_remain_literal() {
+    for source in [
+        "#",
+        "##",
+        "标签 #话题",
+        "word#hash",
+        "####### text",
+        "```\n# code\n```",
+    ] {
+        let e = Editor::new(source);
+        assert!(e.text().contains('#'), "{source:?}");
+    }
 }
 #[test]
 fn view_switch_cancels_preedit_and_preserves_source_selection() {

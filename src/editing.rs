@@ -543,6 +543,28 @@ impl Editor {
         if self.cancel_composition() {
             return;
         }
+        if !forward && !self.source_mode && self.selection().range().is_empty() {
+            let caret = self.selection().head;
+            if let Some(line) = self
+                .projection
+                .lines()
+                .iter()
+                .find(|line| line.heading > 0 && line.visible.start == caret)
+                .cloned()
+            {
+                // Backspace at the start of a heading removes its hidden
+                // structure in one step, rather than trapping the caret there.
+                let source = self.document.source();
+                let body = source[line.content.clone()].to_owned();
+                let _ = self.document.replace_and_select(
+                    line.source_start..line.source_end,
+                    &body,
+                    Selection::caret(line.source_start),
+                );
+                self.reproject();
+                return;
+            }
+        }
         if self.selection().range().is_empty() {
             self.horizontal(forward, true);
         }

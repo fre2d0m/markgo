@@ -7,6 +7,18 @@ try {
     if ($Release) { $profile = 'release'; cargo build --locked --release --bin markgo }
     else { cargo build --locked --bin markgo }
     if ($LASTEXITCODE -ne 0) { throw 'Cargo build failed' }
+    # Verify the linked image, not just a build-script string. Native view
+    # construction can overflow the default 1 MiB Windows executable stack.
+    $image = [IO.File]::ReadAllBytes((Join-Path $repo "target/$profile/markgo.exe"))
+    $optional = [BitConverter]::ToInt32($image, 0x3c) + 24
+    $magic = [BitConverter]::ToUInt16($image, $optional)
+    $stack = if ($magic -eq 0x20b) {
+        [BitConverter]::ToUInt64($image, $optional + 72)
+    } elseif ($magic -eq 0x10b) {
+        [uint64][BitConverter]::ToUInt32($image, $optional + 72)
+    } else { throw 'Unrecognized PE optional header' }
+    if ($stack -lt 8388608) { throw "Insufficient executable stack reserve: $stack" }
+    Write-Host "Verified PE stack reserve: $stack bytes"
     $bundle = Join-Path $repo 'build/MarkGo-windows'
     New-Item -ItemType Directory -Force $bundle, (Join-Path $bundle 'Licenses') | Out-Null
     Copy-Item "target/$profile/markgo.exe" $bundle -Force
