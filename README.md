@@ -74,7 +74,8 @@ See the [development guide](docs/development/setup.md) and [testing strategy](do
 
 - [Documentation index](docs/README.md)
 - [Architecture](docs/architecture/overview.md)
-- [Design system](docs/design/design-system.md)
+- [Design contract](DESIGN.md)
+- [Current design implementation](docs/design/design-system.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)

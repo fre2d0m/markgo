@@ -18,6 +18,12 @@ MarkGo is a free, open-source, local-first Markdown editor built with Go and ful
 - For every visible flow, capture and inspect the actual application view before delivery. Cover normal, empty, error, narrow-window and relevant theme states; fix issues and capture again. Use headless screenshots as layout evidence, and report native-platform checks separately.
 - Recovery never writes the user's Markdown files. Keep source, original bytes and version together; discard only the chosen revision, and do not overwrite unreadable or unsupported recovery data.
 
+## Design authority
+
+Before changing a visible surface, typography, theme, icon or interaction, read [DESIGN.md](DESIGN.md). It is the single product-design contract for the native client. [docs/design/design-system.md](docs/design/design-system.md) records current implementation values; it does not override the contract's targets. Follow [docs/design/review.md](docs/design/review.md) for affected state, geometry and evidence checks.
+
+Keep product commitments, proposed visual measurements and implemented behavior distinct. External brand analyses and generic UI skills are references, not additional authorities. Apply shared changes consistently, update the implementation record with actual code changes, and do not claim a document-only change as visual or native acceptance.
+
 ## MyGo UI
 
 Read `.agents/skills/mygo-maintenance/SKILL.md` before changing UI code. Confirm APIs against the MyGo version pinned in `go.mod`.

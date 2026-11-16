@@ -74,7 +74,8 @@ go tool mygo build
 
 - [文档索引](docs/README.md)
 - [架构概览](docs/architecture/overview.md)
-- [设计规范](docs/design/design-system.md)
+- [设计规范](DESIGN.md)
+- [当前设计实现](docs/design/design-system.md)
 - [贡献指南](CONTRIBUTING.md)
 - [安全政策](SECURITY.md)
 - [更新日志](CHANGELOG.md)
