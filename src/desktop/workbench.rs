@@ -404,9 +404,16 @@ impl Workbench {
             w,
             c,
         );
+        // A cancelled asynchronous file dialog also restores focus. It must
+        // respect a still-open modal rather than expose the editor below it.
+        self.focus_writer(w, c);
     }
     pub(super) fn focus_writer(&self, w: &mut Window, c: &mut App) {
-        let focus = self.writer().focus_handle(c);
+        let focus = if self.panel.is_some() {
+            self.panel_focus.clone()
+        } else {
+            self.writer().focus_handle(c)
+        };
         w.focus(&focus, c);
     }
     pub(super) fn add_tab(
