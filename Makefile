@@ -1,51 +1,34 @@
-.PHONY: check fmt tidy vet staticcheck test race security build dev native-check native-build native-dev native-preview native-render-check
+.PHONY: check fmt core-check test build dev preview render-check native-check native-build native-dev native-preview native-render-check
 
-check: fmt tidy vet staticcheck test
+check: fmt core-check
+	cargo clippy --locked --features render-check --all-targets -- -D warnings
 
 fmt:
-	@files=$$(git ls-files --cached --others --exclude-standard '*.go'); \
-		unformatted=$$(gofmt -l $$files); \
-		if [ -n "$$unformatted" ]; then echo "$$unformatted"; exit 1; fi
+	cargo fmt --check
 
-tidy:
-	go mod tidy -diff
-
-vet:
-	go vet ./...
-	go tool mygo vet ./cmd/markgo
-	go tool mygo vet ./cmd/markgo-preview
-
-staticcheck:
-	go tool staticcheck ./...
+core-check:
+	cargo clippy --locked --no-default-features --all-targets -- -D warnings
+	cargo test --locked --no-default-features
 
 test:
-	CGO_ENABLED=0 go test -cover ./... -count=1
-
-race:
-	go test -race -p 1 ./... -count=1
-
-security:
-	go tool govulncheck ./...
+	cargo test --locked --no-default-features
 
 build:
-	go tool mygo build
+	cargo build --locked --release --bin markgo
 
 dev:
-	go tool mygo dev .
+	cargo run --locked --bin markgo
 
-native-check:
-	cd native && cargo fmt --check
-	cd native && cargo clippy --locked --all-targets -- -D warnings
-	cd native && cargo test --locked
+preview:
+	cargo run --locked --bin markgo -- --preview
 
+render-check:
+	cargo run --locked --features render-check --example render_check -- build/gpui-evidence
+
+# Compatibility aliases for existing Rust contributor scripts.
+native-check: check
 native-build:
-	cd native && cargo build --locked --features desktop --bin markgo
-
-native-dev:
-	cd native && cargo run --locked --features desktop --bin markgo
-
-native-preview:
-	cd native && cargo run --locked --features desktop --bin markgo -- --preview
-
-native-render-check:
-	cd native && cargo run --locked --features render-check --example render_check -- ../build/gpui-evidence
+	cargo build --locked --bin markgo
+native-dev: dev
+native-preview: preview
+native-render-check: render-check

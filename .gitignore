@@ -1,10 +1,7 @@
 /build/
-/.mygo/
 /dist/
-/native/target/
-/coverage.out
+/target/
 /.scratch/
-mygo_windows_*.syso
 *.exe
 *.dll
 *.so
