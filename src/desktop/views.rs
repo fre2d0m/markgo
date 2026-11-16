@@ -75,6 +75,11 @@ impl Workbench {
                 let id = tab.id;
                 div()
                     .id(("tab", tab.id))
+                    // The toolkit title bar labels its entire inner region as
+                    // draggable. Occlude that native hitbox beneath tabs, and
+                    // keep button presses from starting its mouse-drag fallback.
+                    .occlude()
+                    .on_mouse_down(MouseButton::Left, |_, _, c| c.stop_propagation())
                     .h(px(48.))
                     .flex_shrink_0()
                     .flex()
@@ -152,25 +157,29 @@ impl Workbench {
                             .children(tabs),
                     )
                     .child(
-                        button("new-tab", "plus", "新建文档", p, cx)
-                            .on_click(cx.listener(|s, _, w, c| s.new_document(w, c))),
-                    )
-                    .child(
-                        button("all-tabs", "chevron", "所有文档", p, cx)
-                            .on_click(cx.listener(|s, _, w, c| s.show_panel(Panel::Tabs, w, c))),
-                    )
-                    .child(
-                        button("appearance", "appearance", "外观", p, cx).on_click(
-                            cx.listener(|s, _, w, c| s.show_panel(Panel::Appearance, w, c)),
-                        ),
-                    )
-                    .child(
-                        button("focus", "focus", "专注模式", p, cx).on_click(cx.listener(
-                            |s, _, _, c| {
-                                s.focus_mode = !s.focus_mode;
-                                c.notify();
-                            },
-                        )),
+                        div()
+                            .id("titlebar-actions")
+                            .occlude()
+                            .on_mouse_down(MouseButton::Left, |_, _, c| c.stop_propagation())
+                            .flex()
+                            .items_center()
+                            .flex_shrink_0()
+                            .child(
+                                button("new-tab", "plus", "新建文档", p, cx)
+                                    .on_click(cx.listener(|s, _, w, c| s.new_document(w, c))),
+                            )
+                            .child(button("all-tabs", "chevron", "所有文档", p, cx).on_click(
+                                cx.listener(|s, _, w, c| s.show_panel(Panel::Tabs, w, c)),
+                            ))
+                            .child(button("appearance", "appearance", "外观", p, cx).on_click(
+                                cx.listener(|s, _, w, c| s.show_panel(Panel::Appearance, w, c)),
+                            ))
+                            .child(button("focus", "focus", "专注模式", p, cx).on_click(
+                                cx.listener(|s, _, _, c| {
+                                    s.focus_mode = !s.focus_mode;
+                                    c.notify();
+                                }),
+                            )),
                     ),
             )
     }
@@ -1260,14 +1269,17 @@ impl Render for Workbench {
         }
         let p = self.p();
         let writer = self.writer();
-        let panel = self.panel.clone();
+        let has_panel = self.panel.is_some();
+        // Build the overlay before assembling the workbench. Passing the large
+        // root div through when_some while building a dialog multiplies debug
+        // stack frames on Windows.
+        let panel = self
+            .panel
+            .clone()
+            .map(|p| self.panel_view(p, cx).into_any_element());
         div()
             .id("markgo")
-            .key_context(if panel.is_some() {
-                "MarkGoModal"
-            } else {
-                "MarkGo"
-            })
+            .key_context(if has_panel { "MarkGoModal" } else { "MarkGo" })
             .track_focus(&self.root_focus)
             .relative()
             .size_full()
@@ -1334,6 +1346,6 @@ impl Render for Workbench {
                     ),
             )
             .child(self.footer(cx))
-            .when_some(panel, |d, p| d.child(self.panel_view(p, cx)))
+            .children(panel)
     }
 }

@@ -1,4 +1,4 @@
-//! Real GPU rendering of the application, in an isolated offscreen window.
+//! Isolated UI events with native text shaping; GPU capture unless --events-only.
 use gpui_kit::{
     AppContext, Bounds, EntityInputHandler, HeadlessAppContext, WindowBounds, WindowOptions, px,
     size, test::TestWindowExt,
@@ -6,9 +6,235 @@ use gpui_kit::{
 use markgo::desktop::{self, Workbench, assets::Assets, theme::PALETTES};
 use std::sync::Arc;
 
+fn marker_interactions(output: &str) {
+    let mut cx = context();
+    cx.update(desktop::init);
+    let (handle, view) = cx
+        .update(|c| {
+            gpui_kit::open_window(
+                WindowOptions {
+                    window_bounds: Some(WindowBounds::Windowed(Bounds {
+                        origin: Default::default(),
+                        size: size(px(960.), px(640.)),
+                    })),
+                    show: false,
+                    focus: false,
+                    ..Default::default()
+                },
+                c,
+                |w, c| c.new(|c| Workbench::empty_preview(w, c)),
+            )
+        })
+        .unwrap();
+    cx.update_window(handle, |_, w, c| {
+        w.input("#", c);
+        assert_eq!(view.read(c).input_entity().read(c).editor.text(), "#");
+        w.input("#", c);
+        assert_eq!(view.read(c).input_entity().read(c).editor.text(), "##");
+    })
+    .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/typed-hashes.png"));
+    cx.update_window(handle, |_, w, c| {
+        w.input(" ", c);
+        let writer = view.read(c).input_entity();
+        assert_eq!(writer.read(c).editor.text(), "");
+        assert_eq!(writer.read(c).editor.heading_at(0), 2);
+    })
+    .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/empty-heading.png"));
+    cx.update_window(handle, |_, w, c| {
+        w.press("backspace", c);
+        assert_eq!(view.read(c).inspection(c).2, "");
+        w.press(&shortcut("z"), c);
+        assert_eq!(view.read(c).inspection(c).2, "## ");
+        w.input("标题", c);
+        w.click("new-tab", c);
+        w.input("另一个文档", c);
+        w.click(("activate", 1usize), c);
+        assert_eq!(view.read(c).inspection(c).2, "## 标题");
+        w.click(("activate", 2usize), c);
+        assert_eq!(view.read(c).inspection(c).2, "另一个文档");
+        w.click("insert-format", c);
+        w.press("escape", c);
+        w.click("view-menu", c);
+        w.press("escape", c);
+        w.click("appearance", c);
+        w.press("escape", c);
+    })
+    .unwrap();
+    println!(
+        "Passed typed hashes, heading conversion/backspace/undo, pointer tabs and toolbar dialogs"
+    );
+}
+
+fn icon_assets(output: &str) {
+    use gpui_kit::component::Sizable;
+    use gpui_kit::{
+        AssetSource, Context, IntoElement, ParentElement, Render, Styled, Window, div, rgb,
+    };
+    const ICONS: [&str; 38] = [
+        "mark",
+        "file",
+        "folder",
+        "close",
+        "plus",
+        "sidebar",
+        "search",
+        "save",
+        "more",
+        "focus",
+        "exit-focus",
+        "appearance",
+        "bold",
+        "italic",
+        "code",
+        "link",
+        "list",
+        "task-list",
+        "numbered-list",
+        "quote",
+        "paragraph",
+        "check",
+        "chevron",
+        "undo",
+        "read",
+        "edit",
+        "format",
+        "previous",
+        "next",
+        "refresh",
+        "minus",
+        "dirty",
+        "strikethrough",
+        "recovery",
+        "window-minimize",
+        "window-maximize",
+        "window-restore",
+        "window-close",
+    ];
+    let rasterizer = gpui_kit::SvgRenderer::new(Arc::new(Assets));
+    for name in ICONS {
+        let bytes = Assets.load(&format!("markgo/{name}.svg")).unwrap().unwrap();
+        let bitmap = rasterizer.render_single_frame(&bytes, 1.).unwrap();
+        assert!(
+            bitmap
+                .as_bytes(0)
+                .unwrap()
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .any(|p| p[3] > 0),
+            "icon rasterized blank: {name}"
+        );
+    }
+    for name in markgo::desktop::assets::WINDOW_ICONS {
+        assert!(Assets.load(&format!("icons/{name}.svg")).unwrap().is_some());
+    }
+    if events_only() {
+        println!("Validated embedded icons and non-empty rasterized glyphs");
+        return;
+    }
+    struct Gallery;
+    impl Render for Gallery {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div()
+                .size_full()
+                .bg(rgb(0xffffff))
+                .text_color(rgb(0x252932))
+                .flex()
+                .flex_wrap()
+                .content_start()
+                .children(ICONS.iter().map(|name| {
+                    div()
+                        .w(px(120.))
+                        .h(px(72.))
+                        .flex()
+                        .flex_col()
+                        .items_center()
+                        .justify_center()
+                        .gap(px(8.))
+                        .child(markgo::desktop::assets::icon(name).with_size(px(24.)))
+                        .child(div().text_size(px(10.)).child(*name))
+                }))
+        }
+    }
+    let mut cx = context();
+    cx.update(desktop::init);
+    let (handle, _) = cx
+        .update(|c| {
+            gpui_kit::open_window(
+                WindowOptions {
+                    window_bounds: Some(WindowBounds::Windowed(Bounds {
+                        origin: Default::default(),
+                        size: size(px(720.), px(504.)),
+                    })),
+                    show: false,
+                    focus: false,
+                    ..Default::default()
+                },
+                c,
+                |_, c| c.new(|_| Gallery),
+            )
+        })
+        .unwrap();
+    cx.update_window(handle, |_, w, c| w.render_frame(c))
+        .unwrap();
+    let pixels = cx.capture_screenshot(handle).unwrap();
+    let scale = pixels.width() as f32 / 720.;
+    for (index, name) in ICONS.iter().enumerate() {
+        let x = ((index % 6) as f32 * 120. + 48.) * scale;
+        let y = ((index / 6) as f32 * 72. + 15.) * scale;
+        let mut ink = 0;
+        for dy in 0..(24. * scale) as u32 {
+            for dx in 0..(24. * scale) as u32 {
+                let p = pixels.get_pixel(x as u32 + dx, y as u32 + dy);
+                ink += usize::from(p[0] < 180 && p[1] < 180 && p[2] < 180);
+            }
+        }
+        assert!(ink > 4, "icon rendered blank: {name}");
+    }
+    pixels.save(format!("{output}/icons.png")).unwrap();
+    println!("Validated embedded icons and non-empty painted glyphs");
+}
+
+fn events_only() -> bool {
+    std::env::args().any(|arg| arg == "--events-only")
+}
+fn shortcut(key: &str) -> String {
+    let modifier = if cfg!(target_os = "macos") {
+        "cmd"
+    } else {
+        "ctrl"
+    };
+    format!("{modifier}-{key}")
+}
+fn context() -> HeadlessAppContext {
+    // Windows' true-headless platform deliberately uses fake font metrics.
+    // Initialize DirectWrite, but every test window still belongs to TestPlatform.
+    let platform = gpui_kit::platform::current_platform(!cfg!(target_os = "windows"));
+    if events_only() {
+        HeadlessAppContext::with_asset_source(platform.text_system(), Arc::new(Assets))
+    } else {
+        HeadlessAppContext::with_platform(
+            platform.text_system(),
+            Arc::new(Assets),
+            gpui_kit::platform::current_headless_renderer,
+        )
+    }
+}
+fn save_screenshot(cx: &mut HeadlessAppContext, handle: gpui_kit::AnyWindowHandle, path: String) {
+    if !events_only() {
+        cx.capture_screenshot(handle)
+            .expect("Real GPU renderer required")
+            .save(path)
+            .unwrap();
+    }
+}
+
 fn main() {
     let output = std::env::args()
-        .nth(1)
+        .skip(1)
+        .find(|arg| !arg.starts_with("--"))
         .unwrap_or_else(|| "build/gpui-evidence".into());
     std::fs::create_dir_all(&output).unwrap();
     for (name, width, height, palette, preview) in [
@@ -19,11 +245,7 @@ fn main() {
         ("narrow", 960., 640., 0, true),
         ("empty", 960., 640., 0, false),
     ] {
-        let mut cx = HeadlessAppContext::with_platform(
-            gpui_kit::platform::current_platform(true).text_system(),
-            Arc::new(Assets),
-            gpui_kit::platform::current_headless_renderer,
-        );
+        let mut cx = context();
         cx.update(desktop::init);
         let (handle, view) = cx
             .update(|cx| {
@@ -55,25 +277,20 @@ fn main() {
             w.render_frame(c);
         })
         .unwrap();
-        cx.capture_screenshot(handle)
-            .expect("Real Metal/WGPU renderer required")
-            .save(format!("{output}/{name}.png"))
-            .unwrap();
+        save_screenshot(&mut cx, handle, format!("{output}/{name}.png"));
         println!(
-            "Rendered {name} ({width} × {height}, {})",
+            "Validated {name} ({width} × {height}, {})",
             PALETTES[palette].id
         );
     }
     interactions(&output);
     rich_interactions(&output);
+    marker_interactions(&output);
+    icon_assets(&output);
 }
 
 fn rich_interactions(output: &str) {
-    let mut cx = HeadlessAppContext::with_platform(
-        gpui_kit::platform::current_platform(true).text_system(),
-        Arc::new(Assets),
-        gpui_kit::platform::current_headless_renderer,
-    );
+    let mut cx = context();
     cx.update(desktop::init);
     let (handle, view) = cx
         .update(|c| {
@@ -108,20 +325,17 @@ fn rich_interactions(output: &str) {
             view.read(c).inspection(c).2,
             source.replacen("[ ]", "[x]", 1)
         );
-        w.press("cmd-z", c);
+        w.press(&shortcut("z"), c);
         assert_eq!(view.read(c).inspection(c).2, source);
     })
     .unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/rich-writing.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/rich-writing.png"));
     cx.update_window(handle, |_, w, c| {
         w.click(("code-language", 0usize), c);
     })
     .unwrap();
     cx.update_window(handle, |_, w, c| {
-        w.press("cmd-a", c);
+        w.press(&shortcut("a"), c);
         w.input("bad language!", c);
         w.click("apply-entry", c);
         assert_eq!(
@@ -131,21 +345,18 @@ fn rich_interactions(output: &str) {
         );
     })
     .unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/code-error.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/code-error.png"));
     cx.update_window(handle, |_, w, c| {
         w.press("escape", c);
         w.click(("code-language", 0usize), c);
     })
     .unwrap();
     cx.update_window(handle, |_, w, c| {
-        w.press("cmd-a", c);
+        w.press(&shortcut("a"), c);
         w.input("python", c);
         w.click("apply-entry", c);
         assert!(view.read(c).inspection(c).2.contains("```python"));
-        w.press("cmd-z", c);
+        w.press(&shortcut("z"), c);
         assert_eq!(view.read(c).inspection(c).2, source);
         w.click(("copy-code", 0usize), c);
         assert_eq!(
@@ -163,10 +374,7 @@ fn rich_interactions(output: &str) {
         assert_eq!(view.read(c).inspection(c).2, source);
     })
     .unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/link-error.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/link-error.png"));
     cx.update_window(handle, |_, w, c| {
         w.press("escape", c);
         w.click("edit-link", c);
@@ -178,7 +386,7 @@ fn rich_interactions(output: &str) {
                 .2
                 .contains("[工具](<https://example.com>)")
         );
-        w.press("cmd-z", c);
+        w.press(&shortcut("z"), c);
         assert_eq!(view.read(c).inspection(c).2, source);
         w.click("all-tabs", c);
         assert!(w.try_find(("all-tab", 1usize)).is_some());
@@ -187,19 +395,13 @@ fn rich_interactions(output: &str) {
         w.render_frame(c);
     })
     .unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/rich-graphite.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/rich-graphite.png"));
     cx.update_window(handle,|_,w,c|{
         view.update(c,|s,c|s.set_palette(0,w,c));
         let entity=view.read(c).input_entity();entity.update(c,|writer,c|{writer.editor=markgo::editing::Editor::new("# 阅读也轻松\n\n| 章节 | 进展 |\n| --- | --- |\n| 开始 | 已写下第一句 |\n| 继续 | 留给明天 |\n\n**写作**是慢慢整理自己的想法。\n");writer.mode(false,false,w,c);});w.render_frame(c);w.click("view-menu",c);w.click(("mode",2usize),c);
         let before=view.read(c).inspection(c).2;w.input("禁止写入",c);assert_eq!(view.read(c).inspection(c).2,before);
     }).unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/reading-table.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/reading-table.png"));
     cx.update_window(handle, |_, w, c| {
         w.click("view-menu", c);
         w.click(("mode", 0usize), c);
@@ -207,21 +409,14 @@ fn rich_interactions(output: &str) {
         assert!(w.try_find("cancel-exit").is_some());
     })
     .unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/exit.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/exit.png"));
     println!(
         "Passed rich native events: task/undo, language validation, code copy, link validation/apply/undo, tab overflow, reading immutability and exit guard"
     );
 }
 
 fn interactions(output: &str) {
-    let mut cx = HeadlessAppContext::with_platform(
-        gpui_kit::platform::current_platform(true).text_system(),
-        Arc::new(Assets),
-        gpui_kit::platform::current_headless_renderer,
-    );
+    let mut cx = context();
     cx.update(desktop::init);
     let (handle, view) = cx
         .update(|c| {
@@ -245,9 +440,9 @@ fn interactions(output: &str) {
         w.click("new-tab", c);
         w.input("中文 👩‍💻 hello", c);
         assert_eq!(view.read(c).inspection(c).2, "中文 👩‍💻 hello");
-        w.press("cmd-z", c);
+        w.press(&shortcut("z"), c);
         assert_eq!(view.read(c).inspection(c).2, "");
-        w.press("cmd-shift-z", c);
+        w.press(&shortcut("shift-z"), c);
         assert_eq!(view.read(c).inspection(c).2, "中文 👩‍💻 hello");
         let before = view.read(c).inspection(c);
         w.click(("file", 1usize), c);
@@ -257,20 +452,17 @@ fn interactions(output: &str) {
             before, after,
             "tab switching retains source, caret and history"
         );
-        w.press("cmd-w", c);
+        w.press(&shortcut("w"), c);
         assert!(w.try_find("cancel-close").is_some());
         w.click("cancel-close", c);
         assert_eq!(view.read(c).inspection(c).0, 4);
-        w.press("cmd-a", c);
+        w.press(&shortcut("a"), c);
         w.press("backspace", c);
         w.input("/", c);
         assert!(w.try_find(("slash", 1usize)).is_some());
     })
     .unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/slash.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/slash.png"));
     cx.update_window(handle, |_, w, c| {
         w.press("down", c);
         w.press("enter", c);
@@ -298,7 +490,7 @@ fn interactions(output: &str) {
             assert!(rect.origin.x >= px(224.));
             assert!(rect.origin.y >= px(96.));
         });
-        w.press("cmd-z", c);
+        w.press(&shortcut("z"), c);
         assert_eq!(view.read(c).inspection(c).2, "# 真正的标题");
         w.click("appearance", c);
         for i in 0usize..12 {
@@ -308,10 +500,7 @@ fn interactions(output: &str) {
         w.click(("theme", 2usize), c);
     })
     .unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/appearance.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/appearance.png"));
     cx.update_window(handle, |_, w, c| {
         w.click("close-panel", c);
         w.click("search", c);
@@ -319,33 +508,24 @@ fn interactions(output: &str) {
         w.click("toggle-replace", c);
     })
     .unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/search.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/search.png"));
     cx.update_window(handle, |_, w, c| {
         w.click("close-search", c);
-        w.press("cmd-w", c);
+        w.press(&shortcut("w"), c);
     })
     .unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/close-guard.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/close-guard.png"));
     cx.update_window(handle, |_, w, c| {
         w.click("cancel-close", c);
         view.update(c, |v, c| v.render_error_fixture(w, c));
         w.render_frame(c);
         let source = view.read(c).inspection(c).2;
         w.input("must not reach the covered document", c);
-        w.press("cmd-b", c);
+        w.press(&shortcut("b"), c);
         assert_eq!(view.read(c).inspection(c).2, source);
     })
     .unwrap();
-    cx.capture_screenshot(handle)
-        .unwrap()
-        .save(format!("{output}/error.png"))
-        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/error.png"));
     println!(
         "Passed native event dispatch: input, undo/redo, tabs, close guard, slash, composition, geometry and 12 themes"
     );

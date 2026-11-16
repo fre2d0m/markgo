@@ -1205,7 +1205,14 @@ impl Element for Surface {
                     font.weight = FontWeight::SEMIBOLD;
                 }
                 let shown: SharedString = if text.is_empty() {
-                    "写点什么，或输入 / 插入格式".into()
+                    match heading {
+                        1 => "一级标题",
+                        2 => "二级标题",
+                        3 => "三级标题",
+                        4..=6 => "标题",
+                        _ => "写点什么，或输入 / 插入格式",
+                    }
+                    .into()
                 } else if line.is_empty() {
                     " ".into()
                 } else {

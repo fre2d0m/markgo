@@ -42,6 +42,13 @@ jobs:
       - run: rustup show active-toolchain
       - run: cargo clippy --locked --features render-check --all-targets -- -D warnings
       - run: cargo build --locked --bin markgo
+      - name: Exercise writing, tabs, toolbar and dialogs
+        run: cargo run --locked --features render-check --example render_check -- build/interaction-evidence --events-only
+      - name: Regress small-stack interaction crashes
+        if: runner.os == 'macOS'
+        run: |
+          ulimit -s 1024
+          target/debug/examples/render_check build/small-stack-evidence --events-only
       - name: Package macOS app
         if: runner.os == 'macOS'
         run: scripts/bundle-macos.sh

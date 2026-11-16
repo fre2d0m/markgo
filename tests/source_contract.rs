@@ -318,7 +318,7 @@ fn invalid_post_edit_selection_does_not_partially_apply_a_transaction() {
 #[test]
 fn typing_into_empty_headings_keeps_both_marker_boundaries() {
     for (source, expected) in [
-        ("#", "# 字"),
+        ("# ", "# 字"),
         ("## ", "## 字"),
         ("# ###", "# 字 ###"),
         ("## ###", "## 字 ###"),

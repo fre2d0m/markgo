@@ -500,6 +500,11 @@ fn atx_body(line: &str, level: u8) -> Option<Range<usize>> {
         return None;
     }
     let marker_end = indent + count;
+    // A bare run of hashes is still being typed. Convert to an empty visual
+    // heading only once its separating space/tab has actually been entered.
+    if marker_end == bytes.len() {
+        return None;
+    }
     if marker_end < bytes.len() && !matches!(bytes[marker_end], b' ' | b'\t') {
         return None;
     }

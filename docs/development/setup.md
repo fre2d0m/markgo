@@ -16,6 +16,8 @@ cargo build --locked --release
 
 Desktop is the default feature. `cargo test --locked --no-default-features` needs no GPU. Render-check needs native graphics services even with hidden windows.
 
+The development profile enables light optimization to keep native view construction within a small stack while retaining debug symbols. Windows executables reserve 8 MiB of stack; pages are committed on demand. `cargo run --locked --features render-check --example render_check -- build/interaction-evidence --events-only` runs isolated UI events without requiring offscreen GPU capture.
+
 ## Packaging
 
 macOS: `scripts/bundle-macos.sh` creates `build/MarkGo.app`; add `--preview` for `build/MarkGo GPUI Preview.app`, or `--release` for optimization. Normal ID: `dev.markgo.app`; isolated preview: `dev.markgo.writing-preview`. Only the normal bundle registers Markdown types. The script never launches an app.

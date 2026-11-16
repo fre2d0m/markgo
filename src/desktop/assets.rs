@@ -2,8 +2,23 @@ use gpui_kit::{AssetSource, SharedString, component::Icon};
 use std::borrow::Cow;
 
 pub struct Assets;
+pub const WINDOW_ICONS: [&str; 4] = [
+    "window-minimize",
+    "window-maximize",
+    "window-restore",
+    "window-close",
+];
 impl AssetSource for Assets {
     fn load(&self, path: &str) -> anyhow::Result<Option<Cow<'static, [u8]>>> {
+        // TitleBar requests toolkit paths; supply the same embedded vectors as
+        // the rest of MarkGo instead of relying on a second window icon family.
+        let path = match path {
+            "icons/window-minimize.svg" => "markgo/window-minimize.svg",
+            "icons/window-maximize.svg" => "markgo/window-maximize.svg",
+            "icons/window-restore.svg" => "markgo/window-restore.svg",
+            "icons/window-close.svg" => "markgo/window-close.svg",
+            path => path,
+        };
         macro_rules! icons { ($($name:literal),*) => { match path {
             $(concat!("markgo/",$name,".svg") => return Ok(Some(Cow::Borrowed(include_bytes!(concat!("../../assets/icons/",$name,".svg")))))),*,
             _=>{}
@@ -42,7 +57,11 @@ impl AssetSource for Assets {
             "minus",
             "dirty",
             "strikethrough",
-            "recovery"
+            "recovery",
+            "window-minimize",
+            "window-maximize",
+            "window-restore",
+            "window-close"
         );
         gpui_kit::assets::Assets.load(path)
     }

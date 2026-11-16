@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Separate document-tab/action hit targets from native titlebar dragging; reduce dialog construction stack usage and set a Windows executable stack reserve.
+- Keep incomplete heading markers visible until a separating space; Backspace at a heading's start removes its heading format in one undoable edit.
+- Embed window-control vectors alongside the other control icons; add painted-icon checks and cross-platform UI event regressions.
 - Rust/GPUI Kit is the sole root application/build package.
 - Source-preserving native headings, inline formats/links, lists/tasks, quotes and fenced code, including composition and paired delimiter repair.
 - Independent tabs, overflow/context actions, folder filter/collapse/refresh, outline and recent files.
