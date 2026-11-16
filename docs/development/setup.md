@@ -37,11 +37,14 @@ make security
 
 ## Repository layout
 
+For the isolated Rust editor foundation, install rustup and run `make native-check`. Its toolchain is pinned in `native/rust-toolchain.toml`; no system-default toolchain change is required. See [the native guide](../../native/README.md) for scope and [the migration decision](../architecture/gpui-migration.md) for integration gates.
+
 - `cmd/markgo`: executable entry point.
 - `internal/app`: workbench state, views, theme, sample documents, and UI tests.
 - `internal/mdeditor`: Markdown editor state and live-preview behavior.
 - `internal/storage`: guarded UTF-8 file saving and folder enumeration.
 - `resources`: application resources used by MyGo packaging.
+- `native`: separate Rust source/history/projection library for the GPUI migration.
 - `docs`: architecture, design, development, and testing guides.
 - `.github`: issue and PR contracts, dependency automation, and workflows.
 

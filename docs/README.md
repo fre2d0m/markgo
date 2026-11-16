@@ -4,6 +4,7 @@
 
 - [Writing guide](writing.md): documents, formatting, search, saving, reading mode, and shortcuts.
 - [Architecture overview](architecture/overview.md): package boundaries, document ownership, and execution model.
+- [Rust/GPUI migration](architecture/gpui-migration.md): target architecture, independent delivery stages and native acceptance gates.
 - [Development setup](development/setup.md): requirements, commands, repository layout, and definition of done.
 - [Design contract](../DESIGN.md): the authoritative product direction, visual targets and component behavior.
 - [Current design implementation](design/design-system.md): code measurements, palette values, capability limits and existing evidence.

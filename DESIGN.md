@@ -22,7 +22,7 @@ This document establishes the design direction. Publishing it does not certify a
 
 ## Product commitments
 
-- Fully drawn MyGo native UI; no WebView or web rendering layer.
+- Fully drawn native UI; no WebView or web rendering layer. The current client uses MyGo; the [Rust/GPUI migration](docs/architecture/gpui-migration.md) preserves this same design contract.
 - A local Markdown document is the center of the application. AI integration remains deferred.
 - Open multiple documents with persistent tabs. Keep the established full-height tab shape and square lower corners; do not turn tabs into floating pills.
 - Default to direct visual editing. Markdown source and optional reading belong in the View menu, not a permanent Write/Read switch.

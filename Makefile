@@ -1,4 +1,4 @@
-.PHONY: check fmt tidy vet staticcheck test race security build dev
+.PHONY: check fmt tidy vet staticcheck test race security build dev native-check
 
 check: fmt tidy vet staticcheck test
 
@@ -32,3 +32,8 @@ build:
 
 dev:
 	go tool mygo dev .
+
+native-check:
+	cd native && cargo fmt --check
+	cd native && cargo clippy --locked --all-targets -- -D warnings
+	cd native && cargo test --locked

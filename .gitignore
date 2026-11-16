@@ -1,6 +1,7 @@
 /build/
 /.mygo/
 /dist/
+/native/target/
 /coverage.out
 /.scratch/
 mygo_windows_*.syso

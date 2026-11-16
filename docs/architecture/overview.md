@@ -6,6 +6,8 @@ MarkGo is a fully drawn native desktop Markdown editor for focused writing. The 
 
 ## Current boundaries
 
+The executable below remains the current Go/MyGo client. [The Rust/GPUI migration decision](gpui-migration.md) defines the target direction and the gates for replacing it. `native/` currently adds only a separate source-preserving Rust editor library; it does not change the runtime or user data.
+
 ```text
 cmd/markgo
     |
