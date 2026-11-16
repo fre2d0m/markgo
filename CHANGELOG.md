@@ -6,6 +6,8 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- A root design contract, documented reference decisions and a state-based review matrix; current code measurements remain a separate implementation inventory. This documentation change does not alter the application UI.
+
 - A caret-anchored slash menu for paragraphs, headings 1–3, lists, tasks, quotes and code; Chinese/English filtering, keyboard choice, cancellation and single-step undo.
 - An empty-paragraph hint, native vector block icons, whole-row popup sizing and caret-safe upward placement.
 

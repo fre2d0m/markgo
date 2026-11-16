@@ -11,6 +11,8 @@ Thank you for contributing. MarkGo uses GitHub Issues, Pull Requests, Actions, a
 
 Small documentation and obvious defect fixes still need a pull request and CI.
 
+For design or visible UI changes, start with [DESIGN.md](DESIGN.md). It defines the product contract and target scale; the [implementation inventory](docs/design/design-system.md) records current code. Use the [design review matrix](docs/design/review.md) to cover affected states and evidence. Keep those roles distinct instead of treating an old screenshot or an upstream brand file as a second specification.
+
 ## Development setup
 
 Use Go 1.27.4 or newer. MyGo and development tools are pinned by `go.mod`; no sibling framework checkout is required.
