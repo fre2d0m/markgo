@@ -14,7 +14,7 @@ List the commands actually run and their results. Include the operating system a
 
 - [ ] Relevant success, failure, and boundary tests were added or updated.
 - [ ] `make check` passes.
-- [ ] Relevant race, native, or security checks pass.
+- [ ] Relevant GPU rendering, native-platform or dependency checks pass.
 - [ ] Documentation and `AGENTS.md` were updated where behavior or guidance changed.
 - [ ] New dependencies and third-party assets have compatible licenses and notices.
 - [ ] No unrelated changes, credentials, local configuration, or build output are included.

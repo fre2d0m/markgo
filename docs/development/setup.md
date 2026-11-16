@@ -1,55 +1,33 @@
-# Development setup
+# Build and package
 
-## Requirements
+Install rustup, Git and native build tools. `rust-toolchain.toml` pins Rust 1.99.1 with rustfmt/Clippy; Cargo.lock pins dependencies.
 
-- Go 1.27.4 or newer.
-- Windows 10/11, macOS, or Linux with MyGo's native desktop dependencies.
-- Git. Make is recommended for the shared quality commands.
-
-The Go module pins MyGo, Staticcheck, and Govulncheck. A sibling MyGo checkout is not required. For local framework co-development, use an untracked `go.work`; do not commit workstation-specific `replace` directives.
-
-## Run and test
+- macOS: Command Line Tools or licensed Xcode; Metal-capable Mac. The bundle declares macOS 13 minimum; verify actual deployment requirements before distribution.
+- Windows: Visual Studio C++ Build Tools, Windows SDK, MSVC Rust toolchain and supported GPU.
+- Linux: pinned GPUI platform dependencies for Wayland/X11, graphics and fonts. Core CI runs on Linux; its desktop distribution remains experimental until native acceptance.
 
 ```sh
-go run ./cmd/markgo
-go tool mygo dev .
-CGO_ENABLED=0 go test ./... -count=1
-go tool mygo build
-```
-
-To build a portable Windows x64 directory from any supported development host:
-
-```sh
-go tool mygo build -platform windows/amd64 -skip-installer
-```
-
-Distribute the complete `build/windows-amd64/` directory, including its resources. Cross-compiling does not replace a Windows desktop check.
-
-Run the local quality gate before submitting a pull request:
-
-```sh
+cargo run --locked
+cargo run --locked -- --preview
 make check
-make race
-make security
+make render-check
+cargo build --locked --release
 ```
 
-`make check` verifies formatting, module tidiness, Go vet, MyGo's stored-value checks, static analysis, and ordinary tests. Race and vulnerability checks are separate because they take longer or query vulnerability data.
+Desktop is the default feature. `cargo test --locked --no-default-features` needs no GPU. Render-check needs native graphics services even with hidden windows.
 
-## Repository layout
+## Packaging
 
-For the Rust GPUI client, install rustup and run `make native-check`, then `make native-build`. `make native-preview` runs sample documents without real stores; `make native-dev` opens the client with local-file support. `make native-render-check` uses real GPU offscreen rendering and does not open a desktop window. The Rust toolchain is pinned in `native/rust-toolchain.toml`; no system-default change is required. See [the native guide](../../native/README.md) for current limits and [the migration decision](../architecture/gpui-migration.md) for acceptance gates.
+macOS: `scripts/bundle-macos.sh` creates `build/MarkGo.app`; add `--preview` for `build/MarkGo GPUI Preview.app`, or `--release` for optimization. Normal ID: `dev.markgo.app`; isolated preview: `dev.markgo.writing-preview`. Only the normal bundle registers Markdown types. The script never launches an app.
 
-- `cmd/markgo`: executable entry point.
-- `internal/app`: workbench state, views, theme, sample documents, and UI tests.
-- `internal/mdeditor`: Markdown editor state and live-preview behavior.
-- `internal/storage`: guarded UTF-8 file saving and folder enumeration.
-- `resources`: application resources used by MyGo packaging.
-- `native`: Rust source/history/input/projection model, local I/O and GPUI workbench.
-- `docs`: architecture, design, development, and testing guides.
-- `.github`: issue and PR contracts, dependency automation, and workflows.
+Windows: `scripts/bundle-windows.ps1` (optional `-Release`) creates a portable folder/ZIP. Its optional `register-markdown.ps1` adds a current-user Open With registration without changing the default editor.
 
-Additional packages are created with their first real behavior, following [the architecture overview](../architecture/overview.md).
+Linux: `scripts/bundle-linux.sh` (optional `--release`) creates a portable directory with desktop-entry/icon assets. Installing that entry is a separate user choice. Scripts build on their native host; no cross-compilation claim.
 
-## Definition of done
+These are unsigned development artifacts. Release requires native acceptance, target-specific binary notices, signing/provenance and installation testing. Generated output is ignored.
 
-A change is complete when its acceptance criteria are met, relevant tests and documentation are updated, required checks pass, and no unrelated or generated files are included. UI changes additionally need real visual evidence and behavior coverage. MarkGo does not claim cross-platform verification from a build alone; record the actual platforms exercised.
+## State and isolation
+
+Settings: `MarkGo/native/appearance.conf`; recovery: adjacent `session.json`, below macOS Application Support, Windows APPDATA or Linux XDG_CONFIG_HOME (default ~/.config). Unknown/corrupt data is retained. Session schemas 1/2 are readable. If native files do not exist, the previous known MarkGo/session.json and MarkGo/appearance.json are read and retained unchanged. New checkpoints/settings use MarkGo/native. Unknown data blocks migration; development or other application directories are not searched.
+
+`--preview` / `MARKGO_EPHEMERAL=1` bypass real documents, preferences, sessions and recent paths. All integration tests use temporary directories.

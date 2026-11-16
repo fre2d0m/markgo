@@ -1,62 +1,29 @@
-# Architecture overview
+# Architecture
 
-## Goals
+The root Cargo package is the only client. The default `desktop` feature uses GPUI Kit 0.9.1 with the upstream GPUI engine, Base behavior and native controls. `--no-default-features` builds the renderer-independent model. No WebView or cross-language bridge.
 
-MarkGo is a fully drawn native desktop Markdown editor for focused writing. The architecture optimizes for source fidelity, responsive interaction, local data ownership, and testable behavior. AI integration is deferred until the core editor is ready.
+## Source and presentation
 
-## Current boundaries
+`document` owns UTF-8 source, selection, history and composition. `markdown` identifies parser-confirmed ranges; `projection` uses sparse hidden intervals; `editing` performs source transactions. There is no rich-text serializer. Unsupported structures stay literal.
 
-The executable below remains the default Go/MyGo client. [The Rust/GPUI migration decision](gpui-migration.md) defines the target direction and the gates for replacing it. `native/` now contains a separate GPUI Kit desktop client, source-preserving Rust editor model, guarded file I/O and appearance settings. It uses its own settings location and does not migrate the Go client's recovery or session data.
+`desktop/writer` owns UTF-16 text-service callbacks, grapheme movement, shaping/wrapping, selection and task/code controls. Reading uses Kit TextView and source-to-rendered anchors. Remote images are blocked; local paths resolve against the document. Native input/accessibility still require acceptance because MarkGo owns the editor model.
 
-```text
-cmd/markgo
-    |
-internal/app ---- internal/mdeditor
-    |                    |
-    +--------------- MyGo native UI
-    |
-internal/storage
-```
+Each tab retains Writer state, original disk bytes and an optional guarded disk snapshot. Outline, search and file operations use source offsets. Search reconciles scope against an immutable baseline; cross-boundary changes invalidate scope rather than widening replacement.
 
-- `cmd/markgo` is the thin executable entry point. It creates the application model and configures the native window.
-- `internal/app` owns workbench state, presentation, theme adaptation, document selection, and user interaction.
-- `internal/mdeditor` owns the canonical Markdown state, source-preserving native typesetting, structured/inline editing, slash commands, outline and statistics. The older source-replacement adapter remains available to source-editor tests.
-- `internal/writingui` shares native control feedback, fields and floating surfaces between the workbench and editable popovers; it owns no document state or I/O.
-- `internal/storage` owns UTF-8 file snapshots, guarded saving, and recursive folder enumeration.
-- `internal/preferences` atomically writes small local settings. Appearance write revisions reject older workers that finish late; queued writes are drained after the event loop exits.
-- `internal/session` stores bounded recovery checkpoints atomically. The application holds immutable source snapshots, original disk bytes and buffer versions together, serializes them on a worker, and rejects stale write requests. Recent paths and session metadata share the same transaction.
-- `resources` contains assets loaded by MyGo packaging.
+## Files and recovery
 
-Document tabs and the sidebar select the same persistent File objects. The shared tab strip owns only navigation, focus and horizontal scroll state; it reuses each document’s source, selection, undo and guarded close lifecycle. The sample-only Writing Preview uses the same strip with in-memory pages and keeps closed samples available for reopening.
+File reads, writes, directory scans and journal serialization run on workers. Save syncs a sibling temporary file, rechecks original bytes/permissions and renames. Save-as exclusively hard-links the completed temporary file. Filesystems must support these operations. Another process can race the final check/rename: this is conflict detection, not filesystem locking.
 
-Documents have stable identities independent of their names and paths. Each saved document has a disk snapshot with a content digest and permissions. Saves serialize immutable editor snapshots, write and sync a temporary file beside the destination, recheck the disk snapshot, and rename the temporary file. A concurrent external writer can still race the final check and rename; this is conflict detection, not filesystem locking. New files use an exclusive hard link of the completed temporary file and require filesystem support for hard links.
+Reload validates tab identity, source revision and bytes, then applies one undoable transaction. Dirty state compares current bytes with the saved snapshot. Reads reject symlinks and are bounded to 32 MiB. Directory traversal is bounded to depth 8 and 2,000 entries.
 
-## Document model
+Recovery stores committed source, original bytes, cursor, view/scroll, active tab, folder and recent paths: at most 100 documents, 20 recent paths and 64 MiB. Idle checkpoints run after 750 ms or every five seconds of continuous changes. Ordered generations and a shared writer reject obsolete jobs. Recovery never writes document paths. Clean files reload from disk; missing/conflicting originals retain checkpoint text without overwrite permission.
 
-Plain Markdown is the source of truth. Each visited File has a Typesetter over its existing `editor.State`. A sparse byte/rune projection hides supported syntax and native rich text supplies variable-size layout, selection and text services. Commands, input, clipboard and composition update precise source ranges; no rich-text Markdown serializer runs. Source is also the authority for undo, save and recovery. A view-mode change transfers selection, not document text.
+Normal exit waits for its final keep/save/discard checkpoint. Discard prepares serialized state without destroying live buffers; save-all is sequential and cancellation cancels exit. The OS shutdown callback attempts the latest snapshot through the same ordered writer. GPUI imposes a timeout and cannot cancel OS shutdown. Force-kill/power loss can lose changes since the previous checkpoint. Undo history is not persisted.
 
-MyGo's incremental Markdown parser supplies the typesetting structure on the UI thread. Changed lines and display paragraphs retain unaffected layout/style caches. Separate full-snapshot analysis for outline, counts and reading runs on a worker and rejects stale versions. The source editor's highlighter remains incremental.
+Settings/session files remain under `MarkGo/native` in the platform configuration directory. On first use, absent native files can read the previous known MarkGo/session.json and MarkGo/appearance.json locations. Source files remain intact; subsequent writes use MarkGo/native. Unknown versions block migration instead of creating an empty journal. Other application directories are not searched. Unknown/corrupt journals disable writes. Concurrent instances do not coordinate UI state; external-change guards reject conflicting journals.
 
-Visual editing is the default. The View menu exposes Markdown source and optional read-only Markdown rendering with a per-document local-image cache. There is no browser or WebView. Headings, ordinary lists/tasks, simple quotes, fenced code and supported inline spans are directly editable. Images, tables, front matter and complex unsupported syntax remain literal Markdown in visual editing.
+## Workbench and verification
 
-Only visited rich editors are retained as hidden keyed nodes while inactive; MyGo 0.9.0 keeps its viewport privately in widget-local state. Inactive nodes do not parse, paint, receive input or expose accessibility content. Closing a file releases its Typesetter. Find uses the canonical source, with UTF-8 scope anchors reconciled against the last immutable search text so replacements at scope edges remain included. The baseline is released on dismissal/tab changes. Navigation selects source byte ranges, which the Typesetter maps to the visible page. Recovery restores caret/selection, but not exact rich-text pixel scroll across process restarts.
+`workbench` coordinates tabs, actions, dialogs and preferences; `recovery` coordinates checkpoints; `navigation` handles reload and file dispatch. Theme updates synchronize Kit/Base semantic tokens. Layout does no file I/O.
 
-The editor normalizes CRLF in memory. Save snapshots reproduce the original line-ending convention; unedited mixed-ending files preserve their original bytes. Edited mixed-ending documents can only be saved as an explicitly confirmed normalized copy. A save finishing after a later edit must not clear the dirty marker. Reload also checks the buffer version before replacing it.
-
-## Execution model
-
-MyGo's window thread owns UI state. Views may rebuild several times for one event and must not perform slow I/O or start untracked background work. File operations, dialogs, folder scanning, and parser analysis run in guarded workers and publish results through `Window.Update`. Save metadata is prepared before the UI callback. The headless test path computes parser results synchronously because it has no native event loop.
-
-Appearance and session data load before the event loop starts. Normal launches request MyGo's single-instance lock before loading recovery state; subsequent launches forward their open requests. Recovery restores dirty buffers for review and only retains disk-save permission when the original bytes still match. A changed or unavailable original requires Save as. Clean documents are reloaded from disk rather than restored from stale text.
-
-Recovery is debounced for 750 ms and scheduled at least every five seconds of continuous changes, with one routine checkpoint in flight. Explicit discard and final exit writes receive newer revisions. The workbench waits for the final write before closing. Keep drafts retains unsaved sources; Discard strips them while retaining named document paths. Failed final writes offer staying open or an explicit exit with the older checkpoint left intact. Checkpoints do not persist undo history or reader scroll positions.
-
-Appearance settings load before the event loop starts. Theme and typography controls reuse persistent document state and cached editor/reader themes. A theme switch does not recreate a document or its image loader.
-
-Elements and contexts are frame-owned. Persistent application state stores document and widget state, not `ui.Element` or `ui.Context` values.
-
-## Future AI boundary
-
-AI providers receive only context exposed by the user's action and provider settings. Model output is a proposed edit, not an implicit document write. A reviewable diff sits between the result and the editor buffer; accepting a change creates an ordinary undoable edit.
-
-There is no MarkGo account, telemetry endpoint, or required application server. Provider credentials, when introduced, belong in the operating system's secret store rather than Markdown files or source control.
+Preview is strictly in-memory. `render-check` uses hidden actual Metal/WGPU windows and event dispatch, not a host desktop app. It establishes rendered layout/adapter behavior only. See [testing](../testing/strategy.md).

@@ -1,11 +1,9 @@
-name: Rust native client
+name: Rust client
 
 on:
   push:
     branches: [main]
-    paths: ['native/**', '.github/workflows/rust.yml']
   pull_request:
-    paths: ['native/**', '.github/workflows/rust.yml']
   workflow_dispatch:
 
 permissions:
@@ -19,36 +17,40 @@ jobs:
   core:
     name: Rust core (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, windows-latest, macos-15]
-    defaults:
-      run:
-        working-directory: native
     steps:
       - uses: actions/checkout@v7
-      - name: Select the pinned Rust toolchain
-        run: rustup show active-toolchain
+      - run: rustup show active-toolchain
       - run: cargo fmt --check
-      - run: cargo clippy --locked --all-targets -- -D warnings
-      - run: cargo test --locked
+      - run: cargo clippy --locked --no-default-features --all-targets -- -D warnings
+      - run: cargo test --locked --no-default-features
 
   desktop:
     name: GPUI desktop (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         os: [macos-15, windows-latest]
-    defaults:
-      run:
-        working-directory: native
     steps:
       - uses: actions/checkout@v7
-      - name: Select the pinned Rust toolchain
-        run: rustup show active-toolchain
-      - run: cargo clippy --locked --features desktop --all-targets -- -D warnings
-      - run: cargo build --locked --features desktop --bin markgo
+      - run: rustup show active-toolchain
+      - run: cargo clippy --locked --features render-check --all-targets -- -D warnings
+      - run: cargo build --locked --bin markgo
+      - name: Package macOS app
+        if: runner.os == 'macOS'
+        run: scripts/bundle-macos.sh
+      - name: Package Windows portable client
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: scripts/bundle-windows.ps1
+      - uses: actions/upload-artifact@v6
+        with:
+          name: markgo-${{ runner.os }}
+          path: build/MarkGo*
+          if-no-files-found: error

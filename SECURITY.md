@@ -21,4 +21,4 @@ Markdown files, linked resources, and model output are untrusted data.
 - Credentials must use the operating system's secret store when provider settings are implemented.
 - Logs and issue attachments must not contain document contents or secrets unless the user deliberately includes them.
 
-The current foundation has no network provider or real file persistence. These requirements apply as those capabilities are introduced.
+The application persists local documents and recovery data. It has no AI provider. Native reading blocks automatic remote images; HTTP(S) links open only on explicit activation. Recovery and configuration data is not encrypted.
