@@ -114,8 +114,23 @@ impl Palette {
             window,
             cx,
         );
+        #[cfg(target_os = "windows")]
+        let ui_font: SharedString = if cx
+            .text_system()
+            .all_font_names()
+            .iter()
+            .any(|name| name == "Microsoft YaHei UI")
+        {
+            "Microsoft YaHei UI".into()
+        } else {
+            "Segoe UI".into()
+        };
         Theme::update(cx, |t| {
             t.font_size = px(13.);
+            #[cfg(target_os = "windows")]
+            {
+                t.font_family = ui_font;
+            }
             t.radius = px(8.);
             t.radius_lg = px(16.);
             t.window_radius = px(0.);

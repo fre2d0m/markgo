@@ -310,6 +310,47 @@ fn guarded_save_preserves_bytes_and_rejects_external_change() {
     assert_eq!(std::fs::read_dir(&dir.0).unwrap().count(), 1);
 }
 #[test]
+fn windows_path_labels_hide_only_transport_prefixes() {
+    use std::path::Path;
+    for (path, label) in [
+        (r"\\?\C:\Writing\中文.md", r"C:\Writing\中文.md"),
+        (r"\\?\UNC\server\share\note.md", r"\\server\share\note.md"),
+        (r"\\?\Volume{keep}\note.md", r"\\?\Volume{keep}\note.md"),
+        ("/writing/notes.md", "/writing/notes.md"),
+    ] {
+        assert_eq!(storage::display_path(Path::new(path)), label);
+    }
+}
+#[test]
+fn restored_file_identity_is_canonical_without_losing_dirty_text() {
+    use markgo::session::{Draft, restore};
+    let dir = Dir::new();
+    std::fs::create_dir(dir.0.join("nested")).unwrap();
+    let path = dir.0.join("note.md");
+    std::fs::write(&path, "base").unwrap();
+    let legacy = dir.0.join("nested").join("..").join("note.md");
+    let draft = Draft {
+        path: legacy.to_string_lossy().into_owned(),
+        source: "my unsaved writing".into(),
+        original: "base".into(),
+        dirty: true,
+        ..Default::default()
+    };
+    let restored = restore(draft.clone());
+    assert_eq!(
+        restored.draft.path,
+        storage::open(&path).unwrap().path.to_string_lossy()
+    );
+    assert_eq!(restored.draft.source, draft.source);
+    assert!(!restored.conflict);
+    std::fs::write(&path, "external edit").unwrap();
+    let conflict = restore(draft);
+    assert!(conflict.conflict);
+    assert!(conflict.file.is_none());
+    assert_eq!(conflict.draft.source, "my unsaved writing");
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "external edit");
+}
+#[test]
 fn save_as_never_overwrites_an_existing_destination() {
     let dir = Dir::new();
     let path = dir.0.join("writing.md");

@@ -6,6 +6,8 @@
 
 Windows/macOS CI builds and lints the application and runs `render_check --events-only`: isolated input, pointer tabs, toolbar/dialogs, heading conversion, focus, composition and theme checks. This mode uses native text shaping with test windows, without GPU capture. Windows' pinned GPUI backend does not expose an offscreen renderer. Linux CI covers core.
 
+Workbench regression scenes check aligned command/document rows in Paper, Sakura and Graphite, long paths, selected tabs and window clamping. Controlled-clock tests capture popup entry/departure, reverse a closing popup, continue typing during departure and honor reduced motion. Button tests retain their hit bounds through press feedback and cancel formatting when the pointer is released outside.
+
 The macOS job repeats those events with a 1 MiB main-thread stack (`ulimit -s 1024`). This reproduces the Windows debug dialog stack-overflow budget instead of letting macOS' larger default stack hide it. Windows packaging also reads the linked PE header and checks the 8 MiB reserve. Both platforms rasterize all 38 embedded control icons and reject blank results; GPU mode also checks their actual painted pixels, including window controls.
 
 Native acceptance separately requires installed Chinese IME, emoji, clipboard, accessibility, titlebar hit-testing/window drag/resize/Snap, file-drop/association, save dialogs, sleep/shutdown/restart, fractional scale and native latency on every advertised platform. Test pointer dispatch does not exercise Windows' `WM_NCHITTEST` routing.

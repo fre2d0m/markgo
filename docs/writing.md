@@ -4,6 +4,8 @@
 
 Cmd/Ctrl+O opens files; the plus creates a document. Tabs retain separate caret, scroll and undo. A dot marks unsaved changes. Hover titles for paths, scroll overflowing tabs or use the chevron to list all documents. Ctrl+Tab / Ctrl+Shift+Tab cycle tabs. Right-click a tab to save, copy its path, reload or close it.
 
+The current tab has a quiet accent rule. The document switcher shows filenames and paths in aligned rows. View, format and document menus open beside their controls; click outside or press Escape to return to writing. Short control and popover transitions follow the system's reduced-motion setting.
+
 Open a folder at the sidebar foot. Folder rows collapse; filtering reveals matching paths and Refresh rereads changes. Traversal stops at depth 8 or 2,000 entries. Outline navigates headings, including in reading view. View → Recent opens remembered paths; clearing history deletes no files or drafts.
 
 The application accepts command-line paths, OS file requests and dropped files/folders. Packaged association and OS dispatch require verification on your platform. Preview ignores real files.

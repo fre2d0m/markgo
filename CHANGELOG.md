@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Restore tab selection hierarchy, compact aligned command/document popovers, native UI font choice on Windows and restrained hover/press/popup motion with reduced-motion support.
+- Retain canonical file identities through recovery to avoid plain/verbatim Windows path duplicates; keep distinct unsaved buffers and display readable paths.
 - Separate document-tab/action hit targets from native titlebar dragging; reduce dialog construction stack usage and set a Windows executable stack reserve.
 - Keep incomplete heading markers visible until a separating space; Backspace at a heading's start removes its heading format in one undoable edit.
 - Embed window-control vectors alongside the other control icons; add painted-icon checks and cross-platform UI event regressions.

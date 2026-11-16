@@ -77,6 +77,7 @@ impl Workbench {
                                     t.path
                                         .as_ref()
                                         .is_some_and(|p| p.to_string_lossy() == d.path)
+                                        && t.writer.read(c).editor.document.source() == d.source
                                 })
                             {
                                 continue;
@@ -84,7 +85,12 @@ impl Workbench {
                             s.add_tab(d.name, d.source.clone(), restored.file, w, c);
                             let i = s.tabs.len() - 1;
                             s.tabs[i].saved = Arc::from(d.original);
-                            s.tabs[i].path = (!d.path.is_empty()).then(|| d.path.into());
+                            // add_tab keeps the successfully opened canonical
+                            // path. Do not replace it with a legacy journal's
+                            // non-verbatim Windows spelling and reopen a duplicate.
+                            if s.tabs[i].path.is_none() {
+                                s.tabs[i].path = (!d.path.is_empty()).then(|| d.path.into());
+                            }
                             s.tabs[i].recovered = d.dirty;
                             s.tabs[i].conflict = restored.conflict;
                             s.tabs[i].writer.update(c, |writer, c| {

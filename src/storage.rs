@@ -12,6 +12,21 @@ use std::{
 const MAX_FILE_BYTES: u64 = 32 * 1024 * 1024;
 static TEMP_ID: AtomicU64 = AtomicU64::new(1);
 
+/// Keep native filesystem paths intact; remove Windows transport prefixes only
+/// in labels and tooltips.
+pub fn display_path(path: &Path) -> String {
+    let value = path.to_string_lossy();
+    if let Some(unc) = value.strip_prefix("\\\\?\\UNC\\") {
+        return format!("\\\\{unc}");
+    }
+    if let Some(disk) = value.strip_prefix("\\\\?\\")
+        && disk.as_bytes().get(1..3) == Some(b":\\")
+    {
+        return disk.to_owned();
+    }
+    value.into_owned()
+}
+
 #[derive(Clone, Debug)]
 pub struct FileSnapshot {
     pub path: PathBuf,

@@ -264,6 +264,9 @@ pub fn restore(draft: Draft) -> Restored {
             .as_ref()
             .is_none_or(|f| draft.dirty && f.source.as_ref() != draft.original);
     let mut draft = draft;
+    if let Some(file) = &file {
+        draft.path = file.path.to_string_lossy().into_owned();
+    }
     if !draft.dirty
         && let Some(file) = &file
     {

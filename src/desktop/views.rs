@@ -2,15 +2,72 @@ use super::workbench::Panel;
 use super::*;
 use assets::icon;
 use gpui_kit::base::FocusTrapElement;
+use gpui_kit::base::Selectable;
+use gpui_kit::base::motion::{self, Presence, Transition};
 use gpui_kit::{
     component::{
-        Disableable, Sizable, TitleBar,
+        ActiveTheme, Disableable, Sizable, TitleBar,
         button::{Button, ButtonCustomVariant, ButtonVariants},
         input::{Input, InputGroup},
     },
     prelude::*,
 };
+use std::time::Duration;
 use theme::{PALETTES, Palette};
+
+fn menu_row(
+    id: impl Into<ElementId>,
+    name: &str,
+    label: &str,
+    shortcut: &str,
+    p: Palette,
+) -> Button {
+    Button::new(id)
+        .ghost()
+        .h(px(40.))
+        .w_full()
+        .px(px(12.))
+        .rounded(px(8.))
+        .accessibility_label(label.to_owned())
+        .child(
+            div()
+                .w_full()
+                .min_w_0()
+                .flex()
+                .items_center()
+                .gap(px(12.))
+                .text_size(px(13.))
+                .font_weight(FontWeight::NORMAL)
+                .child(
+                    div()
+                        .size(px(18.))
+                        .flex_shrink_0()
+                        .child(icon(name).with_size(px(18.))),
+                )
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .text_ellipsis()
+                        .child(label.to_owned()),
+                )
+                .child(
+                    div()
+                        .text_size(px(11.))
+                        .text_color(rgb(p.muted))
+                        .child(shortcut.to_owned()),
+                ),
+        )
+}
+
+fn separator(p: Palette) -> impl IntoElement {
+    div()
+        .h(px(1.))
+        .flex_shrink_0()
+        .my(px(6.))
+        .mx(px(12.))
+        .bg(rgb(p.edge))
+}
 
 pub(super) trait RowLabel {
     fn row(self, name: &str, label: impl Into<SharedString>) -> Self;
@@ -35,89 +92,122 @@ impl RowLabel for Button {
     }
 }
 
-fn button(id: impl Into<ElementId>, name: &str, label: &str, p: Palette, cx: &App) -> Button {
-    Button::new(id)
-        .icon(icon(name).with_size(px(18.)))
-        .accessibility_label(label.to_owned())
-        .tooltip(label.to_owned())
-        .h(px(40.))
-        .w(px(40.))
-        .rounded(px(8.))
-        .custom(
-            ButtonCustomVariant::new(cx)
-                .color(transparent_black())
-                .foreground(rgb(p.ink).into())
-                .hover(rgb(p.hover).into())
-                .active(rgb(p.pressed).into()),
-        )
+fn button(
+    id: impl Into<ElementId>,
+    name: &str,
+    label: &str,
+    p: Palette,
+    _: &App,
+) -> super::controls::IconButton {
+    super::controls::IconButton::new(id, name, label, p)
 }
 
 impl Workbench {
-    fn titlebar(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn titlebar(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let p = self.p();
         let brand_width = if cfg!(target_os = "macos") {
             144.
         } else {
             212.
         };
-        let tabs = self
-            .tabs
-            .iter()
-            .enumerate()
-            .map(|(index, tab)| {
-                let active = index == self.active;
-                let dirty = tab.dirty(cx);
-                let name = tab.name.clone();
-                let tooltip = tab
-                    .path
-                    .as_ref()
-                    .map_or_else(|| name.clone(), |path| path.to_string_lossy().into_owned());
-                let id = tab.id;
-                div()
-                    .id(("tab", tab.id))
-                    // The toolkit title bar labels its entire inner region as
-                    // draggable. Occlude that native hitbox beneath tabs, and
-                    // keep button presses from starting its mouse-drag fallback.
-                    .occlude()
-                    .on_mouse_down(MouseButton::Left, |_, _, c| c.stop_propagation())
-                    .h(px(48.))
-                    .flex_shrink_0()
-                    .flex()
-                    .items_center()
-                    .bg(rgb(if active { p.paper } else { p.rail }))
-                    .border_b_1()
-                    .border_color(rgb(if active { p.paper } else { p.edge }))
-                    .on_mouse_down(
-                        MouseButton::Right,
-                        cx.listener(move |s, _, w, c| s.show_panel(Panel::Document(id), w, c)),
-                    )
-                    .child(
-                        Button::new(("activate", tab.id))
-                            .ghost()
-                            .h(px(48.))
-                            .w(px(164.))
-                            .rounded(px(0.))
-                            .justify_start()
-                            .row("file", name.clone())
-                            .tooltip(tooltip)
-                            .on_click(cx.listener(move |s, _, w, c| s.activate(index, w, c))),
-                    )
-                    .child(
-                        button(
-                            ("close", tab.id),
-                            if dirty { "dirty" } else { "close" },
-                            if dirty {
-                                "关闭未保存文档"
+        let tabs =
+            self.tabs
+                .iter()
+                .enumerate()
+                .map(|(index, tab)| {
+                    let active = index == self.active;
+                    let dirty = tab.dirty(cx);
+                    let name = tab.name.clone();
+                    let tooltip = tab
+                        .path
+                        .as_ref()
+                        .map_or_else(|| name.clone(), |path| crate::storage::display_path(path));
+                    let id = tab.id;
+                    let background = motion::transition(
+                        ElementId::from(("tab-color", id)),
+                        Hsla::from(rgb(if active {
+                            p.paper
+                        } else if self.hovered_tab == Some(id) {
+                            p.hover
+                        } else {
+                            p.rail
+                        })),
+                        Transition::new(Duration::from_millis(100)),
+                        window,
+                        cx,
+                    );
+                    div()
+                        .id(("tab", tab.id))
+                        // The toolkit title bar labels its entire inner region as
+                        // draggable. Occlude that native hitbox beneath tabs, and
+                        // keep button presses from starting its mouse-drag fallback.
+                        .occlude()
+                        .on_mouse_down(MouseButton::Left, |_, _, c| c.stop_propagation())
+                        .h(px(48.))
+                        .relative()
+                        .flex_shrink_0()
+                        .flex()
+                        .items_center()
+                        .bg(background)
+                        .on_hover(cx.listener(move |s, hovered: &bool, _, c| {
+                            if *hovered {
+                                s.hovered_tab = Some(id);
+                            } else if s.hovered_tab == Some(id) {
+                                s.hovered_tab = None;
+                            }
+                            c.notify();
+                        }))
+                        .border_b_1()
+                        .border_color(rgb(if active { p.paper } else { p.edge }))
+                        .child(div().absolute().top_0().left_0().right_0().h(px(2.)).bg(
+                            if active {
+                                Hsla::from(rgb(p.accent))
                             } else {
-                                "关闭文档"
+                                transparent_black()
                             },
-                            p,
-                            cx,
+                        ))
+                        .on_mouse_down(
+                            MouseButton::Right,
+                            cx.listener(move |s, _, w, c| s.show_panel(Panel::Document(id), w, c)),
                         )
-                        .on_click(cx.listener(move |s, _, w, c| s.request_close(index, w, c))),
-                    )
-            })
-            .collect::<Vec<_>>();
+                        .child(
+                            Button::new(("activate", tab.id))
+                                .role(Role::Tab)
+                                .selected(active)
+                                .custom(
+                                    ButtonCustomVariant::new(cx)
+                                        .color(transparent_black())
+                                        .foreground(
+                                            rgb(if active { p.ink } else { p.muted }).into(),
+                                        )
+                                        .hover(transparent_black())
+                                        .active(transparent_black()),
+                                )
+                                .h(px(48.))
+                                .w(px(164.))
+                                .rounded(px(0.))
+                                .justify_start()
+                                .row("file", name.clone())
+                                .when(active, |b| b.font_weight(FontWeight::MEDIUM))
+                                .tooltip(tooltip)
+                                .on_click(cx.listener(move |s, _, w, c| s.activate(index, w, c))),
+                        )
+                        .child(
+                            button(
+                                ("close", tab.id),
+                                if dirty { "dirty" } else { "close" },
+                                if dirty {
+                                    "关闭未保存文档"
+                                } else {
+                                    "关闭文档"
+                                },
+                                p,
+                                cx,
+                            )
+                            .on_click(cx.listener(move |s, _, w, c| s.request_close(index, w, c))),
+                        )
+                })
+                .collect::<Vec<_>>();
         TitleBar::new()
             .h(px(48.))
             .bg(rgb(p.rail))
@@ -148,6 +238,7 @@ impl Workbench {
                     .child(
                         div()
                             .id("tabs")
+                            .role(Role::TabList)
                             .flex()
                             .items_center()
                             .flex_1()
@@ -245,7 +336,7 @@ impl Workbench {
                         .row("file", tab.name.clone())
                         .tooltip(tab.file.as_ref().map_or_else(
                             || tab.name.clone(),
-                            |file| file.path.to_string_lossy().into_owned(),
+                            |file| crate::storage::display_path(&file.path),
                         ))
                         .when(index == self.active, |b| b.bg(rgb(p.hover)))
                         .on_click(cx.listener(move |s, _, w, c| s.activate(index, w, c))),
@@ -316,7 +407,7 @@ impl Workbench {
                         .justify_start()
                         .pl(px(8. + file.depth as f32 * 8.))
                         .row(if directory { "folder" } else { "file" }, file.name.clone())
-                        .tooltip(file.path.to_string_lossy().into_owned())
+                        .tooltip(crate::storage::display_path(&file.path))
                         .on_click(cx.listener(move |s, _, w, c| {
                             if directory {
                                 if !s.collapsed.remove(&path) {
@@ -629,8 +720,53 @@ impl Workbench {
             )
             .child(div().w(px(72.)).text_right().child(format!("第 {line} 行")))
     }
-    fn panel_view(&self, panel: Panel, cx: &mut Context<Self>) -> impl IntoElement {
+    fn panel_view(
+        &self,
+        panel: Panel,
+        progress: f32,
+        interactive: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let p = self.p();
+        let utility = matches!(
+            &panel,
+            Panel::View | Panel::Format | Panel::Tabs | Panel::Recent | Panel::Document(_)
+        );
+        let width = match &panel {
+            Panel::Tabs => 360.,
+            Panel::Recent => 400.,
+            Panel::View | Panel::Format | Panel::Document(_) => 304.,
+            _ => 440.,
+        };
+        let viewport = window.viewport_size();
+        let anchor = match &panel {
+            Panel::Tabs => point(
+                viewport.width
+                    - px(if cfg!(target_os = "macos") { 0. } else { 117. })
+                    - px(80. + width),
+                px(56.),
+            ),
+            Panel::Format => point(
+                px(if self.sidebar && !self.focus_mode {
+                    441.
+                } else {
+                    217.
+                }),
+                px(100.),
+            ),
+            Panel::Document(_) => self.panel_anchor,
+            _ => point(viewport.width - px(width + 28.), px(100.)),
+        };
+        let anchor = point(
+            anchor.x.clamp(px(8.), viewport.width - px(width + 8.)),
+            anchor.y.clamp(px(56.), viewport.height - px(248.)),
+        );
+        let max_height = if utility {
+            viewport.height - anchor.y - px(36.)
+        } else {
+            viewport.height - px(64.)
+        };
         let title = match &panel {
             Panel::Appearance => "外观",
             Panel::View => "视图与文件",
@@ -649,25 +785,32 @@ impl Workbench {
             .id("panel-body")
             .flex()
             .flex_col()
-            .gap(px(16.))
-            .p(px(24.))
-            .w(px(440.))
-            .max_h(px(568.))
+            .gap(px(if utility { 2. } else { 16. }))
+            .p(px(if utility { 8. } else { 24. }))
+            .w(px(width))
+            .max_h(max_height)
             .overflow_y_scroll()
             .bg(rgb(p.paper))
             .border_1()
             .border_color(rgb(p.edge))
             .rounded(px(16.))
-            .shadow_lg()
+            .shadow_md()
+            .opacity(progress)
+            .relative()
+            .top(px((1. - progress) * if interactive { -4. } else { -2. }))
             .on_mouse_down(MouseButton::Left, |_, _, c| c.stop_propagation())
             .child(
                 div()
+                    .h(px(40.))
+                    .flex_shrink_0()
+                    .when(utility, |d| d.pl(px(12.)))
                     .flex()
                     .items_center()
                     .justify_between()
                     .child(
                         div()
-                            .text_size(px(16.))
+                            .text_size(px(if utility { 13. } else { 16. }))
+                            .text_color(rgb(if utility { p.muted } else { p.ink }))
                             .font_weight(FontWeight::SEMIBOLD)
                             .child(title),
                     )
@@ -810,42 +953,65 @@ impl Workbench {
                     (2, "阅读", reading),
                 ] {
                     content = content.child(
-                        Button::new(("mode", index as usize))
-                            .ghost()
-                            .h(px(40.))
-                            .justify_start()
-                            .label(label)
-                            .icon(icon(if checked { "check" } else { "file" }).with_size(px(18.)))
-                            .on_click(cx.listener(move |s, _, w, c| {
-                                s.set_mode(index == 1, index == 2, w, c)
-                            })),
+                        menu_row(
+                            ("mode", index as usize),
+                            if checked {
+                                "check"
+                            } else if index == 2 {
+                                "read"
+                            } else {
+                                "code"
+                            },
+                            label,
+                            if index == 1 {
+                                if cfg!(target_os = "macos") {
+                                    "⇧⌘M"
+                                } else {
+                                    "Ctrl+Shift+M"
+                                }
+                            } else {
+                                ""
+                            },
+                            p,
+                        )
+                        .when(checked, |b| b.bg(rgb(p.hover)))
+                        .on_click(
+                            cx.listener(move |s, _, w, c| s.set_mode(index == 1, index == 2, w, c)),
+                        ),
                     );
                 }
                 content = content
-                    .child(div().h(px(1.)).bg(rgb(p.edge)))
+                    .child(separator(p))
                     .child(
-                        Button::new("menu-open")
-                            .ghost()
-                            .h(px(40.))
-                            .justify_start()
-                            .icon(icon("file").with_size(px(18.)))
-                            .label("打开文档…")
-                            .on_click(cx.listener(|s, _, w, c| s.prompt_open(false, w, c))),
+                        menu_row(
+                            "menu-open",
+                            "folder",
+                            "打开文档…",
+                            if cfg!(target_os = "macos") {
+                                "⌘O"
+                            } else {
+                                "Ctrl+O"
+                            },
+                            p,
+                        )
+                        .on_click(cx.listener(|s, _, w, c| s.prompt_open(false, w, c))),
                     )
                     .child(
-                        Button::new("menu-save-as")
-                            .ghost()
-                            .h(px(40.))
-                            .justify_start()
-                            .icon(icon("save").with_size(px(18.)))
-                            .label("另存为…")
-                            .on_click(cx.listener(|s, _, w, c| s.save(true, None, w, c))),
+                        menu_row(
+                            "menu-save-as",
+                            "save",
+                            "另存为…",
+                            if cfg!(target_os = "macos") {
+                                "⇧⌘S"
+                            } else {
+                                "Ctrl+Shift+S"
+                            },
+                            p,
+                        )
+                        .on_click(cx.listener(|s, _, w, c| s.save(true, None, w, c))),
                     )
                     .child(
-                        Button::new("menu-recent")
-                            .ghost()
-                            .h(px(40.))
-                            .row("file", "最近打开…")
+                        menu_row("menu-recent", "recovery", "最近打开…", "", p)
                             .on_click(cx.listener(|s, _, w, c| s.show_panel(Panel::Recent, w, c))),
                     );
             }
@@ -854,25 +1020,55 @@ impl Workbench {
                     let detail = tab
                         .path
                         .as_ref()
-                        .map(|p| p.to_string_lossy().into_owned())
+                        .map(|p| crate::storage::display_path(p))
                         .unwrap_or_else(|| "尚未保存".into());
                     content = content.child(
                         Button::new(("all-tab", tab.id))
                             .ghost()
-                            .h(px(64.))
+                            .selected(index == self.active)
+                            .h(px(56.))
+                            .w_full()
+                            .px(px(12.))
+                            .when(index == self.active, |b| b.bg(rgb(p.hover)))
+                            .accessibility_label(format!("{}，{}", tab.name, detail))
+                            .tooltip(detail.clone())
                             .justify_start()
                             .child(
                                 div()
+                                    .w_full()
                                     .flex()
-                                    .flex_col()
+                                    .items_center()
+                                    .gap(px(12.))
                                     .min_w_0()
-                                    .child(tab.name.clone())
+                                    .child(icon("file").with_size(px(18.)).flex_shrink_0())
                                     .child(
                                         div()
-                                            .text_size(px(12.))
-                                            .text_color(rgb(p.muted))
-                                            .text_ellipsis()
-                                            .child(detail),
+                                            .flex_1()
+                                            .min_w_0()
+                                            .flex()
+                                            .flex_col()
+                                            .gap(px(4.))
+                                            .child(
+                                                div()
+                                                    .text_size(px(13.))
+                                                    .text_ellipsis()
+                                                    .child(tab.name.clone()),
+                                            )
+                                            .child(
+                                                div()
+                                                    .text_size(px(11.))
+                                                    .text_color(rgb(p.muted))
+                                                    .text_ellipsis()
+                                                    .child(detail),
+                                            ),
+                                    )
+                                    .child(
+                                        div()
+                                            .size(px(18.))
+                                            .flex_shrink_0()
+                                            .when(index == self.active, |d| {
+                                                d.child(icon("check").with_size(px(18.)))
+                                            }),
                                     ),
                             )
                             .on_click(cx.listener(move |s, _, w, c| {
@@ -888,49 +1084,38 @@ impl Workbench {
                     content = content.child(div().child(tab.name.clone()));
                     if let Some(path) = tab.path.clone() {
                         content = content.child(
-                            Button::new("copy-path")
-                                .ghost()
-                                .h(px(40.))
-                                .label("复制完整路径")
-                                .on_click(cx.listener(move |s, _, w, c| {
+                            menu_row("copy-path", "link", "复制完整路径", "", p).on_click(
+                                cx.listener(move |s, _, w, c| {
                                     c.write_to_clipboard(ClipboardItem::new_string(
                                         path.to_string_lossy().into_owned(),
                                     ));
                                     s.dismiss(w, c);
                                     s.notice = Some("已复制文件路径".into());
-                                })),
+                                }),
+                            ),
                         );
                     }
                     content = content
                         .child(
-                            Button::new("context-save")
-                                .ghost()
-                                .h(px(40.))
-                                .label("保存此文档")
-                                .on_click(cx.listener(move |s, _, w, c| {
+                            menu_row("context-save", "save", "保存此文档", "", p).on_click(
+                                cx.listener(move |s, _, w, c| {
                                     s.activate(index, w, c);
                                     s.panel = None;
                                     s.save(false, None, w, c);
-                                })),
+                                }),
+                            ),
                         )
                         .child(
-                            Button::new("reload-file")
-                                .ghost()
-                                .h(px(40.))
-                                .label("从磁盘重新载入…")
+                            menu_row("reload-file", "refresh", "从磁盘重新载入…", "", p)
                                 .disabled(tab.path.is_none() || tab.saving)
                                 .on_click(
                                     cx.listener(move |s, _, w, c| s.request_reload(id, w, c)),
                                 ),
                         )
                         .child(
-                            Button::new("context-close")
-                                .ghost()
-                                .h(px(40.))
-                                .label("关闭此文档")
-                                .on_click(
-                                    cx.listener(move |s, _, w, c| s.request_close(index, w, c)),
-                                ),
+                            menu_row("context-close", "close", "关闭此文档", "", p).on_click(
+                                cx.listener(move |s, _, w, c| s.request_close(index, w, c)),
+                            ),
                         );
                 }
             }
@@ -962,16 +1147,18 @@ impl Workbench {
             Panel::Format => {
                 for (index, b) in writer::BLOCKS.iter().enumerate() {
                     content = content.child(
-                        Button::new(("format", index))
-                            .ghost()
-                            .h(px(40.))
-                            .justify_start()
-                            .row(b.0, b.1.split_whitespace().next().unwrap())
-                            .on_click(cx.listener(move |s, _, w, c| {
-                                s.panel = None;
-                                s.writer().update(c, |writer, c| writer.block(index, w, c));
-                                c.notify();
-                            })),
+                        menu_row(
+                            ("format", index),
+                            b.0,
+                            b.1.split_whitespace().next().unwrap(),
+                            "",
+                            p,
+                        )
+                        .on_click(cx.listener(move |s, _, w, c| {
+                            s.panel = None;
+                            s.writer().update(c, |writer, c| writer.block(index, w, c));
+                            c.notify();
+                        })),
                     );
                 }
             }
@@ -979,7 +1166,7 @@ impl Workbench {
                 content = content
                     .child(div().text_size(px(14.)).child(format!(
                         "“{}”有尚未保存的修改。关闭后，这些修改将丢失。",
-                        self.tabs[index].name
+                        self.tabs.get(index).map_or("文档", |t| t.name.as_str())
                     )))
                     .child(
                         div()
@@ -1121,7 +1308,7 @@ impl Workbench {
                                             .to_string_lossy()
                                             .into_owned(),
                                     )
-                                    .tooltip(path.to_string_lossy().into_owned())
+                                    .tooltip(crate::storage::display_path(&path))
                                     .on_click(cx.listener(move |s, _, w, c| {
                                         s.panel = None;
                                         s.open_path(open.clone(), w, c);
@@ -1245,21 +1432,58 @@ impl Workbench {
                     );
             }
         }
-        div()
+        let overlay = div()
             .id("modal")
-            .role(Role::Dialog)
+            .role(if utility { Role::Menu } else { Role::Dialog })
             .aria_label(title)
             .track_focus(&self.panel_focus)
-            .occlude()
+            .when(interactive, |d| d.occlude())
             .absolute()
             .inset_0()
             .flex()
             .items_center()
             .justify_center()
-            .bg(Hsla { a: 0.18, ..black() })
-            .on_mouse_down(MouseButton::Left, |_, _, c| c.stop_propagation())
-            .child(content)
-            .focus_trap("workbench-dialog", &self.panel_focus)
+            .when(!utility, |d| {
+                d.bg(Hsla {
+                    a: 0.18 * progress,
+                    ..black()
+                })
+            })
+            .when(interactive, |d| {
+                d.on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |s, _, w, c| {
+                        c.stop_propagation();
+                        if utility {
+                            s.dismiss(w, c);
+                        }
+                    }),
+                )
+            })
+            .child(
+                content
+                    .when(!interactive, |d| {
+                        d.child(
+                            div()
+                                .absolute()
+                                .inset_0()
+                                .occlude()
+                                .on_mouse_down(MouseButton::Left, |_, _, c| c.stop_propagation()),
+                        )
+                    })
+                    .when(utility, |d| {
+                        d.absolute().left(anchor.x).top(
+                            anchor.y + px((1. - progress) * if interactive { -4. } else { -2. }),
+                        )
+                    }),
+            );
+        if interactive {
+            overlay
+                .focus_trap("workbench-dialog", &self.panel_focus)
+                .into_any_element()
+        } else {
+            overlay.into_any_element()
+        }
     }
 }
 impl Render for Workbench {
@@ -1270,13 +1494,27 @@ impl Render for Workbench {
         let p = self.p();
         let writer = self.writer();
         let has_panel = self.panel.is_some();
+        if has_panel {
+            self.presented_panel = self.panel.clone();
+        }
+        let presence = Presence::new("workbench-panel", has_panel)
+            .transition(Transition::new(Duration::from_millis(if has_panel {
+                130
+            } else {
+                90
+            })))
+            .sample(window, cx);
         // Build the overlay before assembling the workbench. Passing the large
         // root div through when_some while building a dialog multiplies debug
         // stack frames on Windows.
-        let panel = self
-            .panel
-            .clone()
-            .map(|p| self.panel_view(p, cx).into_any_element());
+        let panel = if presence.should_render() {
+            self.presented_panel
+                .clone()
+                .map(|p| self.panel_view(p, presence.progress, has_panel, window, cx))
+        } else {
+            self.presented_panel = None;
+            None
+        };
         div()
             .id("markgo")
             .key_context(if has_panel { "MarkGoModal" } else { "MarkGo" })
@@ -1288,7 +1526,7 @@ impl Render for Workbench {
             .bg(rgb(p.rail))
             .text_color(rgb(p.ink))
             .text_size(px(13.))
-            .font_family(".SystemUIFont")
+            .font_family(cx.theme().font_family.clone())
             .on_drop::<ExternalPaths>(cx.listener(|s, paths: &ExternalPaths, w, c| {
                 s.open_external(paths.paths().to_vec(), w, c)
             }))

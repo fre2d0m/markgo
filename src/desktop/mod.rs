@@ -1,4 +1,5 @@
 pub mod assets;
+mod controls;
 mod navigation;
 mod recovery;
 pub mod theme;

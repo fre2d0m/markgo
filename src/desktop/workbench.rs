@@ -65,6 +65,7 @@ pub struct Workbench {
     next_id: usize,
     pub(super) palette: usize,
     pub(super) hovered_theme: Option<usize>,
+    pub(super) hovered_tab: Option<usize>,
     pub(super) prose: f32,
     pub(super) column: f32,
     pub(super) serif: bool,
@@ -73,6 +74,8 @@ pub struct Workbench {
     pub(super) outline: bool,
     pub(super) focus_mode: bool,
     pub(super) panel: Option<Panel>,
+    pub(super) presented_panel: Option<Panel>,
+    pub(super) panel_anchor: Point<Pixels>,
     pub(super) panel_focus: FocusHandle,
     pub(super) panel_focus_pending: bool,
     pub(super) root_focus: FocusHandle,
@@ -274,6 +277,9 @@ impl Workbench {
             outline: false,
             focus_mode: false,
             panel: None,
+            presented_panel: None,
+            panel_anchor: point(px(0.), px(56.)),
+            hovered_tab: None,
             panel_focus: cx.focus_handle(),
             panel_focus_pending: false,
             root_focus: cx.focus_handle(),
@@ -408,6 +414,16 @@ impl Workbench {
         // respect a still-open modal rather than expose the editor below it.
         self.focus_writer(w, c);
     }
+    #[cfg(feature = "render-check")]
+    pub fn menu_fixture(&mut self) {
+        // Display-only paths in ephemeral sample tabs, never opened or saved.
+        for tab in self.tabs.iter_mut().take(3) {
+            tab.path = Some(PathBuf::from(format!(
+                r"\\?\C:\Writing\很长的项目文件夹\{}",
+                tab.name
+            )));
+        }
+    }
     pub(super) fn focus_writer(&self, w: &mut Window, c: &mut App) {
         let focus = if self.panel.is_some() {
             self.panel_focus.clone()
@@ -504,6 +520,7 @@ impl Workbench {
     }
     pub(super) fn show_panel(&mut self, panel: Panel, w: &mut Window, c: &mut Context<Self>) {
         self.cancel_input(w, c);
+        self.panel_anchor = w.mouse_position();
         self.panel = Some(panel);
         w.focus(&self.panel_focus, c);
         c.notify();

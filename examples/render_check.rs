@@ -200,6 +200,216 @@ fn icon_assets(output: &str) {
 fn events_only() -> bool {
     std::env::args().any(|arg| arg == "--events-only")
 }
+
+fn workbench_surfaces(output: &str) {
+    let mut cx = context();
+    cx.update(desktop::init);
+    let (handle, view) = cx
+        .update(|c| {
+            gpui_kit::open_window(
+                WindowOptions {
+                    window_bounds: Some(WindowBounds::Windowed(Bounds {
+                        origin: Default::default(),
+                        size: size(px(960.), px(640.)),
+                    })),
+                    show: false,
+                    focus: false,
+                    ..Default::default()
+                },
+                c,
+                |w, c| c.new(|c| Workbench::new(true, w, c)),
+            )
+        })
+        .unwrap();
+    cx.update_window(handle, |_, w, c| {
+        view.update(c, |s, _| s.menu_fixture());
+        w.render_frame(c);
+    })
+    .unwrap();
+    for (palette, name) in [(0, "paper"), (2, "sakura"), (8, "graphite")] {
+        cx.update_window(handle, |_, w, c| {
+            view.update(c, |s, c| s.set_palette(palette, w, c));
+            w.render_frame(c);
+            w.click("all-tabs", c);
+            let first = w.find(("all-tab", 1usize)).bounds();
+            for id in 1usize..=3 {
+                let row = w.find(("all-tab", id)).bounds();
+                assert_eq!(row.origin.x, first.origin.x);
+                assert_eq!(row.size.height, px(56.));
+                assert!(row.size.width >= px(320.));
+                assert!(row.bottom() < px(612.));
+            }
+        })
+        .unwrap();
+        save_screenshot(&mut cx, handle, format!("{output}/tabs-{name}.png"));
+        cx.update_window(handle, |_, w, c| {
+            w.press("escape", c);
+            w.click("view-menu", c);
+            let first = w.find(("mode", 0usize)).bounds();
+            for id in 0usize..=2 {
+                let row = w.find(("mode", id)).bounds();
+                assert_eq!(row.origin.x, first.origin.x);
+                assert_eq!(row.size.height, px(40.));
+                assert!(row.size.width >= px(280.));
+            }
+            assert_eq!(w.find("menu-open").bounds().origin.x, first.origin.x);
+        })
+        .unwrap();
+        save_screenshot(&mut cx, handle, format!("{output}/view-{name}.png"));
+        cx.update_window(handle, |_, w, c| {
+            w.press("escape", c);
+            w.click("insert-format", c);
+        })
+        .unwrap();
+        save_screenshot(&mut cx, handle, format!("{output}/format-{name}.png"));
+        cx.update_window(handle, |_, w, c| w.press("escape", c))
+            .unwrap();
+    }
+    println!("Passed compact menu row geometry, selection and theme surfaces");
+}
+
+fn workbench_motion(output: &str) {
+    use gpui_kit::{InputEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, point};
+    use std::time::Duration;
+    let mut cx = context();
+    cx.update(desktop::init);
+    cx.update(|c| c.set_reduce_motion(false));
+    let (handle, view) = cx
+        .update(|c| {
+            gpui_kit::open_window(
+                WindowOptions {
+                    window_bounds: Some(WindowBounds::Windowed(Bounds {
+                        origin: Default::default(),
+                        size: size(px(960.), px(640.)),
+                    })),
+                    show: false,
+                    focus: false,
+                    ..Default::default()
+                },
+                c,
+                |w, c| c.new(|c| Workbench::empty_preview(w, c)),
+            )
+        })
+        .unwrap();
+    let start = cx
+        .update_window(handle, |_, w, c| {
+            w.render_frame(c);
+            w.click("view-menu", c);
+            w.find(("mode", 0usize)).bounds().origin.y
+        })
+        .unwrap();
+    cx.advance_clock(Duration::from_millis(65));
+    let middle = cx
+        .update_window(handle, |_, w, c| {
+            w.render_frame(c);
+            w.find(("mode", 0usize)).bounds().origin.y
+        })
+        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/menu-enter-mid.png"));
+    cx.advance_clock(Duration::from_millis(100));
+    let end = cx
+        .update_window(handle, |_, w, c| {
+            w.render_frame(c);
+            w.find(("mode", 0usize)).bounds().origin.y
+        })
+        .unwrap();
+    assert!(
+        start < middle && middle < end,
+        "popover must move through intermediate frames: {start:?}, {middle:?}, {end:?}"
+    );
+    assert!(end - start <= px(4.1));
+    save_screenshot(&mut cx, handle, format!("{output}/menu-shown.png"));
+    cx.update_window(handle, |_, w, c| {
+        w.press("escape", c);
+        w.input("关闭后继续写作", c);
+        assert_eq!(view.read(c).inspection(c).2, "关闭后继续写作");
+    })
+    .unwrap();
+    cx.advance_clock(Duration::from_millis(45));
+    cx.update_window(handle, |_, w, c| w.render_frame(c))
+        .unwrap();
+    save_screenshot(&mut cx, handle, format!("{output}/menu-exit-mid.png"));
+    // The departing surface must not block its toolbar trigger; reverse it.
+    cx.update_window(handle, |_, w, c| w.click("view-menu", c))
+        .unwrap();
+    cx.advance_clock(Duration::from_millis(150));
+    cx.update_window(handle, |_, w, c| {
+        w.render_frame(c);
+        assert!(w.try_find(("mode", 0usize)).is_some());
+        w.press("escape", c);
+    })
+    .unwrap();
+    cx.advance_clock(Duration::from_millis(100));
+    cx.update_window(handle, |_, w, c| {
+        w.render_frame(c);
+        assert!(w.try_find(("mode", 0usize)).is_none());
+    })
+    .unwrap();
+    let target = cx
+        .update_window(handle, |_, w, c| {
+            w.hover("bold", c);
+            w.find("bold").bounds()
+        })
+        .unwrap();
+    cx.advance_clock(Duration::from_millis(60));
+    save_screenshot(&mut cx, handle, format!("{output}/button-hover-mid.png"));
+    cx.update_window(handle, |_, w, c| {
+        w.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: target.center(),
+                click_count: 1,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            c,
+        );
+        w.render_frame(c);
+    })
+    .unwrap();
+    cx.advance_clock(Duration::from_millis(100));
+    save_screenshot(&mut cx, handle, format!("{output}/button-pressed.png"));
+    cx.update_window(handle, |_, w, c| {
+        assert_eq!(w.find("bold").bounds(), target);
+        let outside = point(px(180.), px(600.));
+        w.dispatch_event(
+            MouseMoveEvent {
+                position: outside,
+                pressed_button: Some(MouseButton::Left),
+                ..Default::default()
+            }
+            .to_platform_input(),
+            c,
+        );
+        w.render_frame(c);
+        w.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: outside,
+                click_count: 1,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            c,
+        );
+        w.render_frame(c);
+        assert_eq!(view.read(c).inspection(c).2, "关闭后继续写作");
+    })
+    .unwrap();
+    cx.advance_clock(Duration::from_millis(120));
+    save_screenshot(&mut cx, handle, format!("{output}/button-cancelled.png"));
+    cx.update(|c| c.set_reduce_motion(true));
+    cx.update_window(handle, |_, w, c| {
+        w.click("view-menu", c);
+        assert_eq!(w.find(("mode", 0usize)).bounds().origin.y, end);
+        w.press("escape", c);
+        assert!(w.try_find(("mode", 0usize)).is_none());
+    })
+    .unwrap();
+    println!(
+        "Passed popover intermediate frames, reversible closing, immediate writing focus, press/drag cancellation and reduced motion"
+    );
+}
 fn shortcut(key: &str) -> String {
     let modifier = if cfg!(target_os = "macos") {
         "cmd"
@@ -212,7 +422,7 @@ fn context() -> HeadlessAppContext {
     // Windows' true-headless platform deliberately uses fake font metrics.
     // Initialize DirectWrite, but every test window still belongs to TestPlatform.
     let platform = gpui_kit::platform::current_platform(!cfg!(target_os = "windows"));
-    if events_only() {
+    let mut cx = if events_only() {
         HeadlessAppContext::with_asset_source(platform.text_system(), Arc::new(Assets))
     } else {
         HeadlessAppContext::with_platform(
@@ -220,9 +430,17 @@ fn context() -> HeadlessAppContext {
             Arc::new(Assets),
             gpui_kit::platform::current_headless_renderer,
         )
-    }
+    };
+    // Still frames and semantic events settle instantly. Dedicated motion
+    // checks opt back in and advance this context's simulated clock.
+    cx.update(|cx| cx.set_reduce_motion(true));
+    cx
 }
 fn save_screenshot(cx: &mut HeadlessAppContext, handle: gpui_kit::AnyWindowHandle, path: String) {
+    // Advancing the controlled clock schedules a frame, but does not draw it.
+    // Capture the sampled state, including after a hover or press transition.
+    cx.update_window(handle, |_, w, c| w.render_frame(c))
+        .unwrap();
     if !events_only() {
         cx.capture_screenshot(handle)
             .expect("Real GPU renderer required")
@@ -287,6 +505,8 @@ fn main() {
     rich_interactions(&output);
     marker_interactions(&output);
     icon_assets(&output);
+    workbench_surfaces(&output);
+    workbench_motion(&output);
 }
 
 fn rich_interactions(output: &str) {
