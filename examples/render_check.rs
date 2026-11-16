@@ -262,8 +262,41 @@ fn workbench_surfaces(output: &str) {
         })
         .unwrap();
         save_screenshot(&mut cx, handle, format!("{output}/format-{name}.png"));
-        cx.update_window(handle, |_, w, c| w.press("escape", c))
-            .unwrap();
+        cx.update_window(handle, |_, w, c| {
+            w.press("escape", c);
+            w.click("view-menu", c);
+            w.click("menu-recent", c);
+            let first = w.find(("recent", 0usize)).bounds();
+            for id in 0usize..3 {
+                let row = w.find(("recent", id)).bounds();
+                assert_eq!(row.origin.x, first.origin.x);
+                assert_eq!(row.size.height, px(40.));
+            }
+            assert_eq!(w.find("clear-recent").bounds().origin.x, first.origin.x);
+        })
+        .unwrap();
+        save_screenshot(&mut cx, handle, format!("{output}/recent-{name}.png"));
+        cx.update_window(handle, |_, w, c| {
+            w.press("escape", c);
+            w.click("all-tabs", c);
+            w.click(("all-tab", 3usize), c);
+            w.right_click(("activate", 3usize), c);
+            let first = w.find("copy-path").bounds();
+            for id in ["context-save", "reload-file", "context-close"] {
+                let row = w.find(id).bounds();
+                assert_eq!(row.origin.x, first.origin.x);
+                assert_eq!(row.size.height, px(40.));
+                assert!(row.right() <= px(952.));
+            }
+        })
+        .unwrap();
+        save_screenshot(&mut cx, handle, format!("{output}/document-{name}.png"));
+        cx.update_window(handle, |_, w, c| {
+            w.press("escape", c);
+            w.click("all-tabs", c);
+            w.click(("all-tab", 1usize), c);
+        })
+        .unwrap();
     }
     println!("Passed compact menu row geometry, selection and theme surfaces");
 }

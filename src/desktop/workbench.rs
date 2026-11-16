@@ -423,6 +423,12 @@ impl Workbench {
                 tab.name
             )));
         }
+        self.recent = self
+            .tabs
+            .iter()
+            .take(3)
+            .map(|t| format!("/Writing/很长的项目文件夹/{}", t.name))
+            .collect();
     }
     pub(super) fn focus_writer(&self, w: &mut Window, c: &mut App) {
         let focus = if self.panel.is_some() {

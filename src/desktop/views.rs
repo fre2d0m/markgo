@@ -1081,7 +1081,19 @@ impl Workbench {
             Panel::Document(id) => {
                 if let Some(index) = self.tabs.iter().position(|t| t.id == id) {
                     let tab = &self.tabs[index];
-                    content = content.child(div().child(tab.name.clone()));
+                    content = content.child(
+                        div()
+                            .id("context-document-name")
+                            .w_full()
+                            .min_w_0()
+                            .px(px(12.))
+                            .py(px(4.))
+                            .text_size(px(12.))
+                            .text_color(rgb(p.muted))
+                            .text_ellipsis()
+                            .aria_label(tab.name.clone())
+                            .child(tab.name.clone()),
+                    );
                     if let Some(path) = tab.path.clone() {
                         content = content.child(
                             menu_row("copy-path", "link", "复制完整路径", "", p).on_click(
@@ -1283,7 +1295,8 @@ impl Workbench {
                     .max_h(px(320.))
                     .overflow_y_scroll()
                     .flex()
-                    .flex_col();
+                    .flex_col()
+                    .gap(px(2.));
                 for (index, path) in self.recent.iter().enumerate() {
                     if !path.to_lowercase().contains(&query) {
                         continue;
@@ -1294,25 +1307,25 @@ impl Workbench {
                     rows = rows.child(
                         div()
                             .flex()
+                            .flex_shrink_0()
                             .items_center()
                             .child(
-                                Button::new(("recent", index))
-                                    .ghost()
-                                    .h(px(40.))
-                                    .flex_1()
-                                    .min_w_0()
-                                    .row(
-                                        "file",
-                                        path.file_name()
-                                            .unwrap_or_default()
-                                            .to_string_lossy()
-                                            .into_owned(),
-                                    )
-                                    .tooltip(crate::storage::display_path(&path))
-                                    .on_click(cx.listener(move |s, _, w, c| {
+                                menu_row(
+                                    ("recent", index),
+                                    "file",
+                                    &path.file_name().unwrap_or_default().to_string_lossy(),
+                                    "",
+                                    p,
+                                )
+                                .flex_1()
+                                .min_w_0()
+                                .tooltip(crate::storage::display_path(&path))
+                                .on_click(cx.listener(
+                                    move |s, _, w, c| {
                                         s.panel = None;
                                         s.open_path(open.clone(), w, c);
-                                    })),
+                                    },
+                                )),
                             )
                             .child(
                                 button(("forget-recent", index), "close", "移除这条记录", p, cx)
@@ -1331,11 +1344,9 @@ impl Workbench {
                 } else if count == 0 {
                     rows = rows.child(div().py(px(24.)).child("没有匹配的最近文档"));
                 }
-                content = content.child(rows).child(
-                    Button::new("clear-recent")
-                        .ghost()
-                        .label("清除记录")
-                        .h(px(40.))
+                content = content.child(rows).child(separator(p)).child(
+                    menu_row("clear-recent", "recovery", "清除记录", "", p)
+                        .disabled(self.recent.is_empty())
                         .on_click(cx.listener(|s, _, _, c| {
                             s.recent.clear();
                             s.session_changed();
