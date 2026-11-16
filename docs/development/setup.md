@@ -37,11 +37,14 @@ make security
 
 ## Repository layout
 
+For the Rust GPUI client, install rustup and run `make native-check`, then `make native-build`. `make native-preview` runs sample documents without real stores; `make native-dev` opens the client with local-file support. `make native-render-check` uses real GPU offscreen rendering and does not open a desktop window. The Rust toolchain is pinned in `native/rust-toolchain.toml`; no system-default change is required. See [the native guide](../../native/README.md) for current limits and [the migration decision](../architecture/gpui-migration.md) for acceptance gates.
+
 - `cmd/markgo`: executable entry point.
 - `internal/app`: workbench state, views, theme, sample documents, and UI tests.
 - `internal/mdeditor`: Markdown editor state and live-preview behavior.
 - `internal/storage`: guarded UTF-8 file saving and folder enumeration.
 - `resources`: application resources used by MyGo packaging.
+- `native`: Rust source/history/input/projection model, local I/O and GPUI workbench.
 - `docs`: architecture, design, development, and testing guides.
 - `.github`: issue and PR contracts, dependency automation, and workflows.
 

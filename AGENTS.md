@@ -1,6 +1,6 @@
 # MarkGo
 
-MarkGo is a free, open-source, local-first Markdown editor built with Go and fully drawn MyGo native UI. Core writing takes priority; AI integration is deferred.
+MarkGo is a free, open-source, local-first Markdown editor. The default client uses Go and fully drawn MyGo native UI. `native/` contains the Rust + GPUI Kit migration client, including a real editable workbench; it has not yet reached editor/recovery/platform parity with the Go client. Core writing takes priority; AI integration is deferred.
 
 ## Engineering rules
 
@@ -50,12 +50,30 @@ Read `.agents/skills/mygo-maintenance/SKILL.md` before changing UI code. Confirm
 - Slash insertion arms only on a typed slash in an empty ordinary paragraph, yields to composition, and never opens for pasted paths or literal code. Query deletion and block conversion share one source transaction. Keep the popup anchored horizontally, avoid the caret line when flipping above, and test whole-row bounds at the minimum size.
 - Search in visual editing uses the canonical buffer, with UTF-8 scope anchors reconciled against the last immutable search text. Preserve replaced text at scope edges through undo, explicit syntax and focus. Release search baselines when closing search or switching documents. Save/recovery snapshots exclude preedit without cancelling it; navigation cancels preedit before native focus-loss unmark can commit it.
 
+## Rust and GPUI migration
+
+Read [the migration decision](docs/architecture/gpui-migration.md) and [native foundation guide](native/README.md) before extending `native/`. Keep the Go client runnable until the native migration gates pass. The shared design authority applies to either renderer; MyGo-specific APIs above apply only to the Go client.
+
+- Keep committed Markdown, source history and composition staging in the renderer-independent Rust model. Snapshots must exclude preedit. Validate UTF-8 ranges and reject stale projections before mutation.
+- The first projection supports top-level ATX headings and paragraphs; unsupported syntax stays literal. Preserve parser-confirmed context, closing delimiters, line endings and reversed selections through edit/undo/redo.
+- Pin Rust and dependency versions and commit `Cargo.lock`. Introduce GPUI dependencies with their first actual integration; do not add unused packages or claim the current core is a GPUI application.
+- Run `make native-check` for Rust changes. Model tests do not establish GPUI text-service behavior, candidate geometry, grapheme navigation, visual polish or native performance.
+- The native desktop feature uses GPUI Kit 0.9.1 with the default upstream engine. Keep text-service events in `desktop/writer`, source/display mapping in `editing`/`projection`, file guards in `storage` and ordered preference writes in `preferences`/`desktop/workbench`.
+- Use `Theme::update` to synchronize Kit's component and Base semantic tokens. Direct mutation alone leaves stale control colors. Theme preview swatches use opaque exact palette colors.
+- The title strip must have an explicit available width inside Kit's title-bar wrapper; test overflow with at least four tabs at 960 DIP so utility controls cannot move offscreen.
+- The native preview is sample-only. `--preview` or `MARKGO_EPHEMERAL=1` never reads/writes preferences or real documents. `make native-render-check` uses hidden windows with the real Metal/WGPU renderer; it does not operate a host desktop application.
+- Run `cargo clippy --locked --features render-check --all-targets -- -D warnings`, the core tests and native-render-check after native interaction changes. Screenshots must include empty/normal/narrow, slash, appearance, search, close and error states. Real installed-IME and OS-window acceptance remain separate.
+
 ## Commands
 
 ```sh
 go run ./cmd/markgo
 go tool mygo dev .
 make check
+make native-check
+make native-build
+make native-preview
+make native-render-check
 make race
 make security
 go tool mygo build
@@ -74,6 +92,7 @@ go tool mygo build -skip-dmg ./cmd/markgo-preview
 - `internal/preferences`: bounded preference loading and ordered atomic setting writes.
 - `internal/session`: bounded recovery checkpoints and session metadata; `internal/app` coordinates restoration and UI feedback.
 - `resources`: application resources used by MyGo packaging.
+- `native`: Rust source/history/input/projection model, guarded local I/O and GPUI desktop workbench; the existing Go client remains the default until parity gates pass.
 - `docs`: architecture, design, development, and testing documentation.
 - `.github`: issue and pull-request contracts, dependency automation, and CI.
 

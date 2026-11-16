@@ -1,10 +1,38 @@
 # Current design implementation
 
-Recorded from application code at `075b696` on 2026-11-16.
+The Go baseline below is recorded at `075b696`; the Rust workbench inventory is recorded from the GPUI migration implementation on 2026-11-16.
 
-This is an implementation inventory, not the design authority. Read [DESIGN.md](../../DESIGN.md) for the intended product rules and starting visual targets. The design-contract change edits documentation only; the values below have not been migrated by publishing that contract.
+This is an implementation inventory, not the design authority. Read [DESIGN.md](../../DESIGN.md) for the intended product rules and starting visual targets. The Go baseline and the new native implementation are separate clients; publishing the contract did not change either renderer automatically.
 
-## Current workbench
+## Rust + GPUI workbench
+
+The client in [native/](../../native/README.md) now renders a real GPUI Kit window and editable document. It uses the existing MarkGo palette IDs and original vector icons. No Astrolith code or visual assets are incorporated.
+
+| Area | Implemented value or behavior | Source |
+| --- | --- | --- |
+| Window and tabs | 1320 × 840 default; 960 × 640 minimum; 48 DIP title strip; independent tab identities; 40 DIP close targets; square lower seams; overflow leaves utility controls reachable | [mod.rs](../../native/src/desktop/mod.rs), [views.rs](../../native/src/desktop/views.rs) |
+| Workbench | 48 DIP toolbar, 224 DIP sidebar, 28 DIP footer, 8 DIP outer gutter; no permanent Write/Read segment | [views.rs](../../native/src/desktop/views.rs) |
+| Writing | 18 DIP default prose, 720 DIP centered column, 48/32 DIP horizontal/top padding; native shaped/wrapped text with shared caret, selection and input-service geometry | [writer.rs](../../native/src/desktop/writer.rs) |
+| Controls | Original 24-unit, 1.65-stroke vectors at 18 DIP; 40 DIP targets; left-aligned navigation labels; named icon buttons and filename tooltips | [assets](../../native/assets/icons), [views.rs](../../native/src/desktop/views.rs) |
+| Appearance | Twelve palettes; 440 DIP panel, three-column gallery with 124 × 48 DIP samples; 14–24 DIP prose and 640/720/840 DIP widths; ordered preference persistence | [theme.rs](../../native/src/desktop/theme.rs), [preferences.rs](../../native/src/preferences.rs) |
+| Floating UI | Modal focus trap and background occlusion; Escape restores writing focus; slash menu fits complete rows and scrolls its choices; search reserves space above the editor | [views.rs](../../native/src/desktop/views.rs), [writer.rs](../../native/src/desktop/writer.rs) |
+| Editing and files | Headings/paragraphs directly editable; slash insertion, grapheme navigation, typing-group undo, staged composition, per-tab history/scroll, guarded asynchronous open/save and unsaved-close confirmation | [editing.rs](../../native/src/editing.rs), [workbench.rs](../../native/src/desktop/workbench.rs), [storage.rs](../../native/src/storage.rs) |
+
+Theme changes synchronize both Kit component colors and Base semantic colors with `Theme::update`. Gallery samples use opaque palette colors; the default custom-button transparency otherwise reduces dark-sample contrast. The title strip has an explicit width inside the toolkit's wrapper so four tabs at minimum window width cannot push utility buttons outside the window.
+
+The native rendering check produces actual Metal frames on macOS. The selected images below use 2× display scale; they show in-memory samples, not real user files. Normal writing is 1320 × 840 DIP; empty, slash, appearance and error scenes are 960 × 640 DIP. The error panel is a deliberate conflict fixture, while storage conflict behavior is exercised independently with temporary files.
+
+- [Paper writing](images/gpui/paper.png)
+- [Empty document](images/gpui/empty.png)
+- [Slash insertion](images/gpui/slash.png)
+- [Appearance and dark theme samples](images/gpui/appearance.png)
+- [File-conflict feedback](images/gpui/error.png)
+
+The check also covers Warm, Sakura, Graphite, narrow layout, search and close confirmation. Event-dispatch assertions cover tab switching, typing/undo, slash selection, composition adapter calls/candidate geometry and all twelve themes. These are headless rendering and interaction evidence; installed IME, OS clipboard, screen reader, window chrome and native frame timing remain unverified. The Go rich list/code/inline presentation, recovery/session storage, advanced search and shared motion timings are not yet ported. Other Markdown remains literal in this first Rust projection. See the [migration gates](../architecture/gpui-migration.md) before treating this client as a replacement.
+
+At this checkpoint, `make check`, `make native-check` (38 Rust contract tests), desktop/render-check Clippy and the Metal rendering check passed locally. The separate macOS preview bundle was built and its property list validated. The approved desktop screenshot tool reported that the configured application was not running; native acceptance remains open until the GPUI preview is opened and the meeting approves its operations.
+
+## Go baseline workbench
 
 | Area | Current implementation | Source |
 | --- | --- | --- |
@@ -59,11 +87,11 @@ System appearance resolves to Paper or Graphite. Explicit theme IDs persist inde
 
 See [visual writing](../development/visual-writing.md), [writing guide](../writing.md) and [architecture](../architecture/overview.md) for the full behavior boundaries.
 
-## Applying the new contract
+## Applying the contract to the Go baseline
 
 The next UI pass should compare the root contract's targets with this inventory, starting with the compact workbench and type hierarchy. Review the main and preview toolbar groups together; retain the target sizes and keyboard behavior when adjusting the surrounding frame. Then validate floating controls and all palette consumers.
 
-The compact toolbar, revised nominal sidebar/footer, top breathing room and typography roles in the root contract are **not implemented by this documentation change**. Existing code values are starting evidence, not approved exceptions or unchangeable rules. Implementations must follow the [review procedure](review.md) before replacing this inventory with new measurements.
+The Go baseline above is unchanged by the Rust migration. Its existing values are starting evidence, not approved exceptions or unchangeable rules. Any further changes must follow the [review procedure](review.md); the Rust inventory is recorded separately above.
 
 ## Existing rendered evidence
 

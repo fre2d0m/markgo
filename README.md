@@ -50,6 +50,8 @@ See [ROADMAP.md](ROADMAP.md) for direction and non-goals.
 
 ## Build from source
 
+The separate Rust + GPUI client has its own [build and usage guide](native/README.md), including its supported Markdown editing behavior. The commands below build the Go client.
+
 Requirements: Go 1.27.4 or newer, Git, and a desktop platform supported by MyGo. Make is recommended for the shared quality commands.
 
 ```sh

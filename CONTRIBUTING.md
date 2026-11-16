@@ -26,6 +26,8 @@ make race
 
 See [docs/development/setup.md](docs/development/setup.md) for platform notes.
 
+The isolated Rust editor foundation has a separate pinned toolchain. Run `make native-check` for changes under `native/`; see [its guide](native/README.md) and the [migration decision](docs/architecture/gpui-migration.md). It does not replace the existing client or its checks.
+
 ## Pull requests
 
 - Create a focused branch from an up-to-date `main`.
