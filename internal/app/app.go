@@ -26,6 +26,9 @@ type App struct {
 	sidebar            bool
 	filesFocus         ui.Handle
 	tabs               documentTabState
+	writers            map[string]*mdeditor.Typesetter
+	activeWriter       string
+	find               visualFind
 	window             *mygo.Window
 	windowCommands     windowCommands
 	windowMaximized    bool
@@ -78,6 +81,7 @@ func New() *App {
 		conflicts:        make(map[string]bool),
 		checking:         make(map[string]bool),
 		savedEvents:      make(map[string]uint64),
+		writers:          make(map[string]*mdeditor.Typesetter),
 		notice:           "",
 	}
 }
@@ -110,6 +114,13 @@ func (a *App) View(c *ui.Context) {
 	c.SetTheme(writingTheme(c.Theme(), a.appearance.Theme))
 	c.SetMenuPresentation(ui.PopoverMenus)
 	a.processOpenQueue()
+	a.syncWriting()
+	if c.Shortcut(ui.Cmd|ui.Shift, ui.KeyM) {
+		a.setWritingMode(!a.preview, false)
+	}
+	if c.Shortcut(ui.Cmd, ui.KeyF) {
+		a.openFind()
+	}
 	if c.Shortcut(ui.Cmd, ui.KeyN) && !a.fileBusy {
 		a.newDocument()
 	}
@@ -162,6 +173,7 @@ func (a *App) View(c *ui.Context) {
 			if width > 0.5 {
 				ui.Column(c.Key("sidebar-slot")).Width(width).Shrink(0).FillHeight().Clip().Disabled(!showSidebar).Label("File sidebar").Children(func() { a.fileSidebar(c) })
 			}
+			a.syncWriting()
 			a.editorPane(c.Key("document-pane"), a.current())
 		})
 		if !a.focusMode {
@@ -181,10 +193,12 @@ func (a *App) editorPane(c *ui.Context, f *mdeditor.File) {
 	t := c.Theme()
 	st := f.State
 	st.RenderFindBar = renderFindBar
-	f.Focus.OnShortcut(c, ui.Cmd, ui.KeyB, func() { a.format(f, func() bool { return mdeditor.ToggleInline(st, "**") }) })
-	f.Focus.OnShortcut(c, ui.Cmd, ui.KeyI, func() { a.format(f, func() bool { return mdeditor.ToggleInline(st, "*") }) })
-	f.Focus.OnShortcut(c, ui.Cmd, ui.Key1, func() { a.format(f, func() bool { return mdeditor.SetHeading(st, 1) }) })
-	f.Focus.OnShortcut(c, ui.Cmd, ui.Key2, func() { a.format(f, func() bool { return mdeditor.SetHeading(st, 2) }) })
+	if !a.preview {
+		f.Focus.OnShortcut(c, ui.Cmd, ui.KeyB, func() { a.format(f, func() bool { return mdeditor.ToggleInline(st, "**") }) })
+		f.Focus.OnShortcut(c, ui.Cmd, ui.KeyI, func() { a.format(f, func() bool { return mdeditor.ToggleInline(st, "*") }) })
+		f.Focus.OnShortcut(c, ui.Cmd, ui.Key1, func() { a.format(f, func() bool { return mdeditor.SetHeading(st, 1) }) })
+		f.Focus.OnShortcut(c, ui.Cmd, ui.Key2, func() { a.format(f, func() bool { return mdeditor.SetHeading(st, 2) }) })
+	}
 	if a.appearanceOpen || a.formatOpen {
 		// The writing caret stays focused while these controls are used.
 		// Consume Escape before the editor collapses the user's selection.
@@ -203,13 +217,7 @@ func (a *App) editorPane(c *ui.Context, f *mdeditor.File) {
 	a.applyTypography(f.Reader, t)
 	st.Theme = a.editorTheme
 	analysis, ready := a.analysisFor(f)
-	if a.preview {
-		if ready {
-			st.SetReplacements(analysis.Replacements(st))
-		}
-	} else {
-		st.SetReplacements(nil)
-	}
+	st.SetReplacements(nil)
 	pane := ui.Column(c).Grow(1).MinWidth(0).FillHeight()
 	if a.focusMode {
 		pane.Background(t.Background)
@@ -219,6 +227,12 @@ func (a *App) editorPane(c *ui.Context, f *mdeditor.File) {
 	pane.Children(func() {
 		if !a.focusMode {
 			a.documentToolbar(c, f)
+		}
+		if w := a.writers[f.ID]; a.preview && !a.reading && w != nil && w.Notice != "" {
+			ui.Row(c.Key("writing-notice")).FillWidth().Padding(0, 24).MinHeight(44).Gap(8).AlignItems(ui.Center).Background(t.Surface).Children(func() {
+				ui.Text(c, w.Notice).FontSize(12).TextColor(t.TextMuted).Grow(1).MinWidth(0).Role(ui.RoleStatus)
+				iconButton(c, "dismiss", "close", "Dismiss writing notice").OnClick(func() { w.Notice = "" })
+			})
 		}
 		a.recoveryNotice(c, f)
 		if a.conflicts[f.ID] && a.recovered[f.ID] == "" {
@@ -232,28 +246,26 @@ func (a *App) editorPane(c *ui.Context, f *mdeditor.File) {
 				}
 			})
 		}
-		if a.reading {
-			if !ready {
-				ui.Text(c, "Preparing document…").FontSize(13).TextColor(t.TextMuted).Padding(38, 48)
-				return
-			}
-			ui.Scroll(c).Grow(1).FillWidth().MinHeight(0).Padding(38, 48).Children(func() {
-				ui.Row(c).FillWidth().Justify(ui.Center).Children(func() {
-					ui.Column(c).Grow(1).MaxWidth(a.appearance.Width).MinWidth(0).Children(func() {
-						markdown.View(c.Key(f.ID), analysis.Source(), f.Reader).FillWidth()
-					})
+		a.visualFindBar(c)
+		ui.Row(c.Key("writing-content")).Grow(1).FillWidth().MinHeight(0).Padding(38, 48).Justify(ui.Center).AlignItems(ui.Stretch).Children(func() {
+			a.visualEditors(c, f)
+			if a.reading {
+				if !ready {
+					ui.Text(c, "Preparing document…").FontSize(13).TextColor(t.TextMuted)
+					return
+				}
+				ui.Scroll(c.Key("reader")).Grow(1).MaxWidth(a.appearance.Width).MinWidth(0).FillHeight().Children(func() {
+					markdown.View(c.Key(f.ID), analysis.Source(), f.Reader).FillWidth()
 				})
-			})
-		} else {
-			ui.Row(c).Grow(1).FillWidth().MinHeight(0).Padding(38, 48).Justify(ui.Center).AlignItems(ui.Stretch).Children(func() {
-				view := editor.View(c.Key(f.ID), st).Bind(&f.Focus).Grow(1).MaxWidth(a.appearance.Width).MinWidth(0).FillHeight()
+			} else if !a.preview {
+				view := editor.View(c.Key("source-"+f.ID), st).Bind(&f.Focus).Grow(1).MaxWidth(a.appearance.Width).MinWidth(0).FillHeight()
 				// Arrow navigation previews documents without moving focus out of
 				// the file list. Enter in that list explicitly starts writing.
 				if (!a.filesFocus.FocusWithin(c) && !a.tabs.focus.FocusWithin(c)) || a.focusMode {
 					view.AutoFocus()
 				}
-			})
-		}
+			}
+		})
 	})
 }
 

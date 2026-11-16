@@ -95,6 +95,9 @@ func (n *typesettingInput) replace(a, z int, s string, marked bool) {
 
 func (n *typesettingInput) ReplaceText(r *ui.TextInputRange, s string) {
 	t := n.owner
+	if r == nil && s == "/" && !t.composing {
+		t.armSlash()
+	}
 	s = strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
 	plainTyping := r == nil && !t.composing && utf8.RuneCountInString(s) == 1 && !strings.ContainsAny(s, "\n\t`~*_[\\]()")
 	// GTK/IMM32 may unmark before sending the final replacement. If no

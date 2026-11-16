@@ -25,10 +25,10 @@ func TestWorkspace(t *testing.T) {
 	if got := a.current().Name; got != "Markdown Reference.md" {
 		t.Fatalf("selected document %q", got)
 	}
-	if err := tt.Click("Document menu"); err != nil {
+	if err := tt.Click("View options"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.Click("Show Markdown source"); err != nil {
+	if err := tt.Click("Markdown source"); err != nil {
 		t.Fatal(err)
 	}
 	if a.preview {
@@ -123,7 +123,7 @@ func TestFormattingToolbarAndShortcut(t *testing.T) {
 	file.Focus.Focus()
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.KeyI)
-	if !strings.Contains(file.State.Buffer.String(), "*focused writing*") {
+	if !strings.Contains(file.State.Buffer.String(), "_focused writing_") {
 		t.Fatalf("shortcut did not format selection: %q", file.State.Buffer.String())
 	}
 }
@@ -169,13 +169,14 @@ func TestReadModeKeepsMarkdownSourceUntouched(t *testing.T) {
 	a := exampleApp()
 	tt := ui.NewTester(a.View, 1320, 840)
 	before := a.current().State.Buffer.String()
-	if err := tt.Click("Read document"); err != nil {
+	click(t, tt, "View options")
+	if err := tt.Click("Reading view"); err != nil {
 		t.Fatal(err)
 	}
 	if !a.reading || !tt.HasText("Welcome to MarkGo") {
 		t.Fatalf("read mode: %q", tt.Texts())
 	}
-	if err := tt.Click("Edit document"); err != nil {
+	if err := tt.Click("Return to writing"); err != nil {
 		t.Fatal(err)
 	}
 	if a.reading || a.current().State.Buffer.String() != before {
@@ -188,7 +189,7 @@ func TestLivePreviewTaskClickEditsSourceAndCanUndo(t *testing.T) {
 	tt := ui.NewTester(a.View, 1320, 840)
 	file := a.current()
 	before := file.State.Buffer.String()
-	if err := tt.Click("Not done"); err != nil {
+	if err := tt.Click("Toggle task: Write your first note"); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(file.State.Buffer.String(), "- [x] Write your first note") {
@@ -261,7 +262,7 @@ func TestFindReplaceAndUndoInLivePreview(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Type("你好")
-	if count, _ := file.State.FindMatches(); count != 2 {
+	if count := len(a.find.matches); count != 2 || !a.preview || a.reading {
 		t.Fatalf("Chinese find: %d matches; texts %q", count, tt.Texts())
 	}
 	if err := tt.Click("Next match"); err != nil {

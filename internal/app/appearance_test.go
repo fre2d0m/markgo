@@ -19,7 +19,8 @@ func TestThemeChoiceRepaintsWritingSurface(t *testing.T) {
 		a := New()
 		tt := ui.NewTester(a.View, 960, 640)
 		if reading {
-			click(t, tt, "Read document")
+			click(t, tt, "View options")
+			click(t, tt, "Reading view")
 		}
 		for _, tc := range []struct {
 			label string

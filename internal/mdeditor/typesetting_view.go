@@ -7,8 +7,11 @@ import (
 
 // TypesettingView uses MyGo's native text layout, selection and input-method
 // client. The spans change typography only, never the characters being edited.
-func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
-	t.Sync()
+func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font, inactive ...bool) ui.Element {
+	suspended := len(inactive) > 0 && inactive[0]
+	if !suspended {
+		t.SyncSelection()
+	}
 	if font.LineHeight == 0 {
 		font.LineHeight = 1.75
 	}
@@ -21,7 +24,7 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 	t.services = services
 	th := c.Theme()
 	options := richtext.EditorOptions{
-		Label: "Typeset document", Placeholder: "A thought, a sentence, a beginning…",
+		Label:      "Typeset document",
 		NoMarkdown: true, Font: font,
 		Theme: &richtext.Theme{Text: th.Text, Caret: th.Text, Selection: th.Selection, ParagraphSpacing: 0.12,
 			CodeFont: "monospace", CodeSize: 0.9, CodeBlockBackground: th.Surface, CodeBlockRadius: 8 / font.Size, CodeBlockPadding: [2]float32{16 / font.Size, 10 / font.Size}},
@@ -81,7 +84,7 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 				t.Document.SetSelection(0, t.Document.Text().Len())
 			}
 		},
-		SpansVersion: t.projection.styleVersion,
+		SpansVersion: t.projection.styleVersion + t.searchVersion,
 		Spans: func(p int, _ richtext.ParagraphStyle, spans []ui.Span) []ui.Span {
 			return t.styleSpans(p, font, spans, th)
 		},
@@ -102,15 +105,17 @@ func TypesettingView(c *ui.Context, t *Typesetter, font ui.Font) ui.Element {
 			return 0
 		},
 	}
-	if t.Source.Buffer.Len() > 0 {
-		options.Placeholder = ""
-	}
 	options.Theme.Indent = t.input.gutter / font.Size
 	view := richtext.EditorBase(c, t.Document, options).Bind(&t.input.handle).HandleTextInput(&t.input).ObserveInput(func(ev ui.InputEvent) { t.observe(ev, services) }).Clip()
+	if suspended {
+		return view.Hidden(true)
+	}
 	t.listMarkers(c, view, font)
 	t.quoteBars(c, view)
 	t.codeHeaders(c, view)
 	t.linkPopover(c, view)
+	t.slashPopover(c, view)
+	t.emptyParagraphHint(c, view, font)
 	return view
 }
 
@@ -120,6 +125,10 @@ func (t *Typesetter) observe(ev ui.InputEvent, services ui.Services) {
 		t.beforeAnchor, t.beforeCaret = t.Document.Selection()
 	}
 	switch ev.Kind {
+	case ui.InputText:
+		if ev.Text == "/" {
+			t.armSlash()
+		}
 	case ui.InputPointerDown:
 		t.CancelComposition()
 		t.caretAffinity = false
@@ -147,6 +156,9 @@ func (t *Typesetter) observe(ev ui.InputEvent, services ui.Services) {
 }
 
 func (t *Typesetter) key(key ui.Key, mods ui.Modifiers, services ui.Services) bool {
+	if !t.composing && t.slashKey(key, mods) {
+		return true
+	}
 	if !t.composing && key == ui.KeyEscape && t.pendingStyles != 0 {
 		t.CancelInlineIntent()
 		return true

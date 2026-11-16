@@ -18,7 +18,7 @@ internal/storage
 
 - `cmd/markgo` is the thin executable entry point. It creates the application model and configures the native window.
 - `internal/app` owns workbench state, presentation, theme adaptation, document selection, and user interaction.
-- `internal/mdeditor` owns MyGo Markdown editor state, source-preserving parser analysis, outline and statistics, formatting, list continuation, and live-preview replacements.
+- `internal/mdeditor` owns the canonical Markdown state, source-preserving native typesetting, structured/inline editing, slash commands, outline and statistics. The older source-replacement adapter remains available to source-editor tests.
 - `internal/writingui` shares native control feedback, fields and floating surfaces between the workbench and editable popovers; it owns no document state or I/O.
 - `internal/storage` owns UTF-8 file snapshots, guarded saving, and recursive folder enumeration.
 - `internal/preferences` atomically writes small local settings. Appearance write revisions reject older workers that finish late; queued writes are drained after the event loop exits.
@@ -31,11 +31,13 @@ Documents have stable identities independent of their names and paths. Each save
 
 ## Document model
 
-Plain Markdown is the source of truth. Live preview uses parser-derived byte offsets and editor replacements to hide or replace source marks without changing the buffer. A caret or selection inside a formatted element reveals its source. Interactive task markers edit the original buffer and remain subject to undo. Stale parser results are rejected by buffer version; existing replacements follow edits while fresh analysis runs.
+Plain Markdown is the source of truth. Each visited File has a Typesetter over its existing `editor.State`. A sparse byte/rune projection hides supported syntax and native rich text supplies variable-size layout, selection and text services. Commands, input, clipboard and composition update precise source ranges; no rich-text Markdown serializer runs. Source is also the authority for undo, save and recovery. A view-mode change transfers selection, not document text.
 
-MyGo's Markdown parser supplies block and inline structure. This application currently parses a complete snapshot on a worker; it is not an incremental Markdown parser. The editor's highlighter remains incremental. List continuation reuses its confirmed tokenizer context to avoid changing fenced code or comments, with a bounded highlighting budget.
+MyGo's incremental Markdown parser supplies the typesetting structure on the UI thread. Changed lines and display paragraphs retain unaffected layout/style caches. Separate full-snapshot analysis for outline, counts and reading runs on a worker and rejects stale versions. The source editor's highlighter remains incremental.
 
-Reading uses MyGo's native Markdown renderer and per-document local-image cache. The flattened source is supplied by the analysis worker; MyGo maintains its own incremental rendering parse on the UI thread. It does not introduce a browser or WebView. Reading and editing are separate views of one source. The editor does not yet provide variable-height, directly editable headings, tables, images, or math.
+Visual editing is the default. The View menu exposes Markdown source and optional read-only Markdown rendering with a per-document local-image cache. There is no browser or WebView. Headings, ordinary lists/tasks, simple quotes, fenced code and supported inline spans are directly editable. Images, tables, front matter and complex unsupported syntax remain literal Markdown in visual editing.
+
+Only visited rich editors are retained as hidden keyed nodes while inactive; MyGo 0.9.0 keeps its viewport privately in widget-local state. Inactive nodes do not parse, paint, receive input or expose accessibility content. Closing a file releases its Typesetter. Find uses the canonical source, with UTF-8 scope anchors reconciled against the last immutable search text so replacements at scope edges remain included. The baseline is released on dismissal/tab changes. Navigation selects source byte ranges, which the Typesetter maps to the visible page. Recovery restores caret/selection, but not exact rich-text pixel scroll across process restarts.
 
 The editor normalizes CRLF in memory. Save snapshots reproduce the original line-ending convention; unedited mixed-ending files preserve their original bytes. Edited mixed-ending documents can only be saved as an explicitly confirmed normalized copy. A save finishing after a later edit must not clear the dirty marker. Reload also checks the buffer version before replacing it.
 

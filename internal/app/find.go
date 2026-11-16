@@ -9,6 +9,31 @@ import (
 // renderFindBar keeps the editor's native search, selection and undo behavior
 // while giving each action a distinct label and fitting the narrow workbench.
 func renderFindBar(c *ui.Context, bar ui.Element, find *editor.FindBar) {
+	renderDocumentFind(c, bar, find)
+}
+
+type findControls interface {
+	Query() *string
+	Replacement() *string
+	CaseSensitive() *bool
+	WholeWord() *bool
+	Regexp() *bool
+	InSelection() *bool
+	Replacing() bool
+	SetReplacing(bool)
+	CanReplace() bool
+	Status() string
+	Matches() (int, int)
+	Previous()
+	Next()
+	Close()
+	Replace()
+	ReplaceAll()
+	QueryInput(ui.Element) ui.Element
+	ReplacementInput(ui.Element) ui.Element
+}
+
+func renderDocumentFind(c *ui.Context, bar ui.Element, find findControls) {
 	t := c.Theme()
 	writingui.Surface(c, bar).Width(480).Gap(8).Padding(12)
 	field := func(id, label string, value *string) ui.Element {

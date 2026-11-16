@@ -11,11 +11,11 @@ A quiet, fully drawn desktop Markdown editor that feels immediate, keeps ordinar
 | Area | Available foundation | Required before 1.0 beta |
 | --- | --- | --- |
 | Documents | Manual open/save/save-copy, folders, external-change guards, recent documents, session restore, local recovery and Keep drafts on exit | Optional guarded autosave; native recovery/exit acceptance, including OS shutdown and file-dialog cancellation |
-| Editing | One Markdown source buffer, supported syntax hiding, lists/tasks/quotes, undoable formatting, find/replace | Directly editable heading sizes, paragraphs, lists, quotes and code; continuous selection and undo across blocks; stable Chinese IME |
+| Editing | Real files default to source-preserving visual editing: variable-size headings, ordinary lists/tasks, simple quotes, fenced code and supported inline spans; slash insertion, formatting, outline and find/replace share source history | Native cross-block selection, clipboard and Chinese IME acceptance; sustained input latency and memory profiling |
 | Images and tables | Formatted in Read mode | Local image insertion/paste/drop with relative paths; directly editable basic GFM tables and keyboard navigation |
 | Navigation | File list, folders, outline, focus mode | Reliable source/read positions, complete keyboard flow, purposeful empty/error/loading states, discoverable row actions |
 | Output | Portable Markdown files | HTML and PDF export, with image/Unicode/page-break acceptance fixtures |
-| Presentation | Three palettes, typography and width preferences, self-drawn window controls | Coherent motion and feedback in every writing flow; Chinese/English interface and accessible names/focus; actual high-DPI acceptance |
+| Presentation | Twelve palettes, typography and width preferences, self-drawn window controls, multi-document tabs and a compact toolbar | Coherent motion and feedback in every writing flow; Chinese/English interface and accessible names/focus; actual high-DPI acceptance |
 | Release | Three-platform builds and headless tests | Windows-first native acceptance, then native acceptance for each additional platform advertised by the beta; documented installation/update path |
 
 ## Delivery order
@@ -53,11 +53,11 @@ However, direct `ParseMarkdown(source).Markdown()` replacement is unsuitable for
 | Reference link | Rewritten as an inline link |
 | YAML front matter | Reinterpreted as a heading |
 
-A runnable, sample-only prototype now explores a source-preserving adapter over native rich text. See the [native typesetting checkpoint](native-typesetting.md) for the implementation decision, commands, screenshots, tests and limitations. It directly edits headings/paragraphs, maps edits to the canonical source, and shares source-mode history. Incremental parsing, compact line maps and retained paragraph layouts reduce long-document input allocations; fixed-workload benchmarks and fresh-parse comparisons cover this checkpoint. The production editor is unchanged. Native IME/selection acceptance, desktop latency and sustained-memory checks remain required before integration. Do not introduce a WebView, replace the editor with a whole-document serializer, or maintain two competing authoritative document models.
+A source-preserving adapter over native rich text is now the main application's default editor. See the [native typesetting checkpoint](native-typesetting.md) for its implementation and the [visual-writing integration](visual-writing.md) for file/tab/search/slash coverage. It maps precise edits to the canonical buffer and shares source-mode history, save snapshots and recovery. Incremental parsing, compact line maps and retained paragraph layouts reduce long-document input allocations. A separate sample-only executable remains for isolated native checks. Native IME/selection acceptance, desktop latency and sustained-memory checks are still release gates. Do not introduce a WebView, a whole-document serializer or two authoritative document models.
 
-The isolated preview now includes source-backed bullets, decimal numbering, tasks, simple quotations, top-level fenced code, bold/italic/strike, inline code and links. It supports continuation/exit, indentation, code tools, a compact inline-format row, link editing, paired-syntax edits and shared clipboard/undo behavior. The rendering matrix has 141 states across three themes, with behavior, native-client contract and fresh-projection tests. Image insertion and basic GFM table editing are next. Native-platform acceptance remains a separate integration gate.
+The main editor and isolated preview share bullets, decimal numbering, tasks, simple quotations, top-level fenced code, bold/italic/strike, inline code and links. They support continuation/exit, indentation, code tools, link editing, paired-syntax edits and shared clipboard/undo. The main workbench adds slash insertion, visual find/replace and secondary source/reading menu choices. Image insertion and basic GFM table editing are still pending. The native-platform acceptance gate has not been replaced by headless tests.
 
-The chosen approach must pass these gates before integration:
+The integrated editor must pass these gates before release:
 
 1. Untouched source ranges, unsupported syntax, reference definitions, code languages and line endings remain intact.
 2. Heading/body selection, CJK composition, delete across a block boundary, paste and undo form a continuous editing experience.

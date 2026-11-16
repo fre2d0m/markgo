@@ -9,32 +9,35 @@ import (
 	"github.com/egoist/mygo/ui/richtext"
 )
 
-// Typesetter is an experimental, source-preserving editing projection. Source
+// Typesetter is a source-preserving editing projection. Source
 // owns every edit and its history. Document is disposable presentation state;
 // neither richtext.ParseMarkdown nor its Markdown serializer is used here.
-// Keep it on the UI thread, in the isolated sample workspace only.
+// Keep it on the UI thread. File I/O uses immutable Source snapshots.
 type Typesetter struct {
 	Source   *editor.State
 	Document *richtext.Document
 	Notice   string
 
-	projection                          typesetProjection
-	sourceVersion, richVersion          uint64
-	beforeAnchor, beforeCaret           int
-	composing                           bool
-	compositionAnchor, compositionCaret int
-	pendingCommand, pendingText         string
-	input                               typesettingInput
-	appliedStyle                        int
-	services                            ui.Services
-	blockUI                             typesetBlockUI
-	inlinePainted                       map[int]uint64
-	inlineDirty                         map[int]bool
-	caretAffinity                       bool
-	pendingStyles                       uint8
-	pendingStyleAt                      int
-	pendingStyleVersion                 uint64
-	linkUI                              typesetLinkUI
+	projection                            typesetProjection
+	sourceVersion, richVersion            uint64
+	beforeAnchor, beforeCaret             int
+	composing                             bool
+	compositionAnchor, compositionCaret   int
+	pendingCommand, pendingText           string
+	input                                 typesettingInput
+	appliedStyle                          int
+	services                              ui.Services
+	blockUI                               typesetBlockUI
+	inlinePainted                         map[int]uint64
+	inlineDirty                           map[int]bool
+	caretAffinity                         bool
+	pendingStyles                         uint8
+	pendingStyleAt                        int
+	pendingStyleVersion                   uint64
+	linkUI                                typesetLinkUI
+	syncedSelection                       editor.Selection
+	slash                                 slashMenu
+	searchStart, searchEnd, searchVersion int
 }
 
 func NewTypesetter(source *editor.State) *Typesetter {
@@ -86,6 +89,7 @@ func (t *Typesetter) FromSource() {
 	t.composing = false
 	t.input.marked = false
 	t.caretAffinity = true
+	t.syncedSelection = t.Source.Selection()
 }
 
 // Sync commits completed native edits as precise source replacements. While an
@@ -194,6 +198,35 @@ func (t *Typesetter) ToSource() {
 	t.Sync()
 	a, z := t.Document.Selection()
 	t.selectSourceRange(a, z)
+	t.syncedSelection = t.Source.Selection()
+}
+
+// SyncSelection keeps navigation and recovery in canonical byte offsets.
+// Explicit source selections (outline/search) take precedence; ordinary rich
+// caret movement otherwise updates Source without making a history entry.
+func (t *Typesetter) SyncSelection() {
+	t.Sync()
+	if t.composing {
+		return
+	}
+	if selection := t.Source.Selection(); selection != t.syncedSelection {
+		t.Document.SetSelection(t.projection.viewOffset(selection.Anchor), t.projection.viewOffset(selection.Head))
+		t.caretAffinity = true
+	} else {
+		a, z := t.Document.Selection()
+		t.selectSourceRange(a, z)
+	}
+	t.syncedSelection = t.Source.Selection()
+}
+
+// Suspend ends transient input before a tab, view or file operation changes
+// ownership. The rich document and its retained view keep their history/place.
+func (t *Typesetter) Suspend() {
+	t.ToSource()
+	t.CancelInlineIntent()
+	t.DismissSlash()
+	t.linkUI.open = false
+	t.blockUI.languageOpen = false
 }
 
 func (t *Typesetter) selectSourceRange(a, z int) {
@@ -205,7 +238,9 @@ func (t *Typesetter) selectSourceRange(a, z int) {
 	if a > z {
 		start, end = end, start
 	}
-	t.Source.Select(start, end)
+	if t.Source.Selection() != (editor.Selection{Anchor: start, Head: end}) {
+		t.Source.Select(start, end)
+	}
 }
 
 func (t *Typesetter) CancelComposition() {

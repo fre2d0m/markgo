@@ -2,6 +2,8 @@
 
 This pass concentrates on the existing native interface. It retains the latest application icon, the ordinary app's file/recovery lifecycle and the sample-only boundary of Writing Preview. It adds no editor syntax, AI integration or WebView. Screenshots below are actual Go-view renders, not native desktop acceptance.
 
+This records the earlier shell/theme pass. For the current default visual editor, secondary View menu and slash/search interactions, see [Visual writing and slash insertion](visual-writing.md).
+
 ## Visual and interaction changes
 
 | Area | Before | After |

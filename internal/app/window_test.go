@@ -56,7 +56,7 @@ func TestCaptionControlsRemainReachableInWritingModes(t *testing.T) {
 			a := New()
 			tt := ui.NewTester(a.View, 960, 640)
 			tt.SetScale(scale)
-			for _, action := range []string{"Toggle file sidebar", "Focus mode", "Exit focus mode", "Toggle file sidebar", "Read document", "Edit document"} {
+			for _, action := range []string{"Toggle file sidebar", "Focus mode", "Exit focus mode", "Toggle file sidebar", "View options", "Reading view", "Return to writing"} {
 				click(t, tt, action)
 				lastRight := float32(0)
 				for _, label := range []string{"Minimize window", "Maximize window", "Close window"} {

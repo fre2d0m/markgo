@@ -6,6 +6,9 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- A caret-anchored slash menu for paragraphs, headings 1–3, lists, tasks, quotes and code; Chinese/English filtering, keyboard choice, cancellation and single-step undo.
+- An empty-paragraph hint, native vector block icons, whole-row popup sizing and caret-safe upward placement.
+
 - A native document tab strip with independent writing positions and undo, unsaved-state feedback, guarded closing, full-path tooltips, context actions, Ctrl+Tab cycling and a bounded all-documents menu.
 - Shared sample tabs in Writing Preview; closed sample edits remain available in memory.
 - Sakura, Sage, Mist, Lavender, Sand, Pearl, Midnight, Pine and Plum writing themes, alongside Paper, Warm paper and Graphite.
@@ -30,6 +33,11 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 - File integrity, saved-version, reload, Unicode, composition, and editing regression tests.
 
 ### Changed
+
+- Real documents now default to source-preserving native visual editing, with variable-size headings and editable structured/inline formatting. Files, tabs, save snapshots, recovery, outline and undo use the same Markdown buffer.
+- Removed the persistent Write/Read switch; visual editing, Markdown source and optional reading live in the View menu. Existing formatting tools remain available.
+- Find/replace stays in visual editing, including regex, case, word and selection scope; source-byte anchors retain replaced text at scope edges through edits and undo. The panel reserves space above the page, and the current match stays highlighted while the query field has focus.
+- Retained each visited document's visual viewport across tab/view switches and prevented navigation from committing unfinished input-method candidates. Native platform acceptance and directly editable images/tables remain pending.
 
 - Refined document tabs as compact full-height controls with square lower corners and theme-driven active feedback, plus a separate rounded writing page and quieter sidebar selection.
 - Unified native buttons, inputs and floating panels; refined sidebar type, segmented view controls, dialog spacing and stable footer metrics.

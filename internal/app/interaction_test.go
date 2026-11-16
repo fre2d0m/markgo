@@ -131,7 +131,8 @@ func TestOutlineNavigationStaysInReadingMode(t *testing.T) {
 	tt := ui.NewTester(a.View, 960, 640)
 	f := a.current()
 	before, selection := f.State.Buffer.String(), f.State.Selection()
-	click(t, tt, "Read document")
+	click(t, tt, "View options")
+	click(t, tt, "Reading view")
 	click(t, tt, "Outline")
 	click(t, tt, "Go to Try the editor")
 	first := f.Reader.AnchorVersion
