@@ -31,11 +31,12 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Changed
 
+- Refined document tabs as compact rounded controls with theme-driven active feedback, plus a separate rounded writing page and quieter sidebar selection.
 - Unified native buttons, inputs and floating panels; refined sidebar type, segmented view controls, dialog spacing and stable footer metrics.
 - Added restrained hover/press feedback throughout formatting, appearance, search and dialog actions, respecting reduced motion.
 - Tuned primary and secondary text contrast across all twelve palettes, including hovered and pressed surfaces.
 - Replaced the application icon and configured its high-resolution packaging asset.
-- Rebuilt the workspace around a 60 DIP self-drawn tab bar, a 240 DIP navigation rail and a distinct paper surface; retained OS resize edges, close protection and maximize state.
+- Rebuilt the workspace around a 48 DIP self-drawn tab bar, a 216 DIP navigation rail and a distinct paper surface; retained OS resize edges, close protection and maximize state.
 - Refined Paper, Warm paper, and Graphite; reduced wordmark and icon weight, softened sidebar selection, and added active-tool states and interruptible, reduced-motion-aware panel transitions.
 - Kept keyboard focus in the file list while moving between documents; Enter begins editing the selection.
 - Moved writing modes and common inline actions into a 56 DIP page toolbar, with labeled heading, list and quote actions in the Formatting panel; unified controls and find fields around 40 DIP targets.

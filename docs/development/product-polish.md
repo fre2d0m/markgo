@@ -6,9 +6,9 @@ This pass concentrates on the existing native interface. It retains the latest a
 
 | Area | Before | After |
 | --- | --- | --- |
-| Workbench structure | A document title beside a flat sidebar/editor split | Document tabs over a distinct paper surface, a separate page toolbar, 60 DIP title bar, 240 DIP navigation and a restrained outer gutter |
+| Workbench structure | A document title beside a flat sidebar/editor split | Document tabs over a distinct paper surface, a separate page toolbar, 48 DIP title bar, 216 DIP navigation and a restrained outer gutter |
 | Brand | Small line symbol and lowercase wordmark | Existing application icon at 28 DIP and a clearer 15 DIP MarkGo name |
-| Document tabs | Open files discoverable only in the sidebar | 224 DIP tabs with close/dirty feedback, full-path tooltips, context actions, new document and a bounded overflow menu; duplicate names include folders |
+| Document tabs | Open files discoverable only in the sidebar | Full-height 172 × 48 DIP tabs with close/dirty feedback, full-path tooltips, context actions, new document and a bounded overflow menu; duplicate names include folders |
 | Tab navigation | No visible tab navigation | Ctrl+Tab cycling, automatic reveal after navigation/resizing, independent selection/scroll/undo and existing unsaved-close guards; preview sample tabs reopen with edits intact |
 | Page toolbar | All writing actions lived in the title bar or popovers | Write/Read or Typeset/Source beside directly reachable formatting, with labeled paragraph actions instead of a duplicate icon strip, detailed popovers and uncluttered global actions |
 | Theme catalog | Three themes; preference/native appearance switches maintained separate ID lists | Twelve complete palettes; one catalog resolves persistence and OS light/dark appearance |
@@ -17,7 +17,7 @@ This pass concentrates on the existing native interface. It retains the latest a
 | Keyboard focus | Mouse choices worked; Tab could remain in the preview editor, and hidden panel controls could retain focus | Opening places focus in Appearance; Tab and Space/Enter operate themes; Close/Escape, anchor toggles and interrupted panel changes return appropriately without changing the writing selection |
 | Buttons and icons | Separate implementations and inconsistent hover/press feedback | Shared 40 DIP targets, 8 DIP radius, 100 ms color transitions and 0.96 press response; 18 DIP workbench vectors |
 | Floating surfaces | Several corner, border and shadow treatments | Shared 16 DIP corners, theme edges, light/dark shadow depth without stacking toolkit shadows and reversible 130/90 ms entrance/exit; document remains still |
-| Sidebar and outline | Some 10 DIP helper text, 12 DIP filenames; outline lacked a pressed state | 13 DIP document/outline/sample titles, 11 DIP helper text, paper-colored file selection with readable icons, cleaner sample spacing, outline press feedback and full-title tooltips |
+| Sidebar and outline | Some 10 DIP helper text, 12 DIP filenames; outline lacked a pressed state | 13 DIP document/outline/sample titles, 11 DIP helper text, theme-tinted file selection with readable icons, cleaner sample spacing, outline press feedback and full-title tooltips |
 | Source/typeset switch | Two independent filled buttons | One recessed segmented control with a distinct selected surface and preserved click targets |
 | Document menus | Dense rows and smaller panel corners | 40 DIP application-menu rows with the native keyboard model; document-menu surface follows the shared panel treatment |
 | Search | Narrow mixed control treatments | 480 DIP panel, consistent 40 DIP fields/actions, clearer active options and shared feedback |

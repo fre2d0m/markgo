@@ -155,10 +155,11 @@ func (a *App) themeCard(c *ui.Context, p palette) {
 }
 
 func appearanceSegment(c *ui.Context, label string, selected bool) ui.Element {
-	t := c.Theme()
-	b := writingui.Interactive(c, ui.ButtonBase(c), selected).MinWidth(0).Height(40).Center().KeepFocus().Label(label)
+	b := ui.ButtonBase(c).MinWidth(0).Height(40).Center().KeepFocus().Label(label)
 	if selected {
-		b.Background(t.Background).Border(1, t.Border).TextColor(t.Text).Description("Selected")
+		writingui.Primary(c, b).Description("Selected")
+	} else {
+		writingui.Interactive(c, b, false)
 	}
 	return b
 }

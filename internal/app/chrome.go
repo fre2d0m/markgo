@@ -20,7 +20,12 @@ func (a *App) header(c *ui.Context) {
 		}
 		ui.Row(c.Key("workspace")).Width(sidebarWidth).Shrink(0).FillHeight().Padding(0, 12).AlignItems(ui.Center).Children(func() {
 			button := writingui.Interactive(c, ui.ButtonBase(c.Key("workspace-menu")), false).Height(44).Padding(0, 6).KeepFocus().Label("Document menu").Tooltip("Document menu")
-			button.Children(func() { ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() { brand(c) }) })
+			button.Children(func() {
+				ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+					brand(c)
+					ui.Icon(c, icons["chevron"]).Size(12, 12).TextColor(t.TextMuted)
+				})
+			})
 			button.PopoverMenuButton(a.documentMenu, ui.PopoverMenuButtonOptions{Panel: func(panel ui.Element) { writingui.Surface(c, panel).Padding(8) }})
 			ui.Spacer(c)
 			iconButton(c, "sidebar", "sidebar", "Toggle file sidebar").OnClick(func() {
@@ -30,6 +35,7 @@ func (a *App) header(c *ui.Context) {
 				}
 			})
 		})
+		ui.Box(c).Width(1).Height(24).MarginEnd(8).Background(t.Border.Alpha(0.7))
 		services := c.Services()
 		documentTabs(c, &a.tabs, a.files, a.selected, a.fileBusy, a.selectDocument, a.closeDocument, a.newDocument, func(menu *ui.Menu, file *mdeditor.File) { a.fileMenu(services, menu, file) })
 		ui.Row(c.Key("window-tools")).Shrink(0).PaddingStart(8).Gap(2).AlignItems(ui.Center).Children(func() {
@@ -57,7 +63,7 @@ func (a *App) header(c *ui.Context) {
 
 func (a *App) documentToolbar(c *ui.Context, file *mdeditor.File) {
 	t := c.Theme()
-	ui.Row(c.Key("document-toolbar")).FillWidth().Height(56).Padding(6, 16).Gap(12).AlignItems(ui.Center).Children(func() {
+	ui.Row(c.Key("document-toolbar")).FillWidth().Height(52).Padding(6, 20).Gap(12).AlignItems(ui.Center).Children(func() {
 		ui.Row(c.Key("writing-mode")).Height(44).Padding(2).Gap(2).Radius(10).Background(t.Surface).Shrink(0).Children(func() {
 			for _, mode := range []struct {
 				label, name string
@@ -88,7 +94,7 @@ func (a *App) documentToolbar(c *ui.Context, file *mdeditor.File) {
 			writingui.Surface(c, panel).Width(248).Padding(8).Margin(8, 0, 0).Children(func() { a.blockFormatting(c, file) })
 		})
 	})
-	ui.Box(c).FillWidth().Height(1).MarginX(16).Background(t.Border.Alpha(0.55))
+	ui.Box(c).FillWidth().Height(1).MarginX(20).Background(t.Border.Alpha(0.4))
 }
 
 func (a *App) documentMenu(m *ui.Menu) {
@@ -171,7 +177,7 @@ func (a *App) fileSidebar(c *ui.Context) {
 func (a *App) documentList(c *ui.Context) {
 	t := c.Theme()
 	services := c.Services()
-	ui.SearchField(c.Key("filter"), &a.query).Height(40).Background(t.Background).Border(1, t.Border).Radius(8).FontSize(13).Placeholder("Find a document").Label("Filter documents")
+	ui.SearchField(c.Key("filter"), &a.query).Height(40).Background(t.Background).Border(1, t.Border.Alpha(0.65)).Radius(8).FontSize(13).Placeholder("Find a document").Label("Filter documents")
 	ui.Row(c).FillWidth().Padding(2, 10).AlignItems(ui.Center).Children(func() {
 		ui.Text(c, "Open documents").FontSize(11).FontWeight(500).TextColor(t.TextMuted).Grow(1)
 		ui.Textf(c, "%d", len(a.files)).FontSize(11).FontFeatures("tnum").TextColor(t.TextMuted)
@@ -200,11 +206,14 @@ func (a *App) documentList(c *ui.Context) {
 					path = file.Name
 				}
 				if file.ID == a.selected {
-					row.Background(t.Background).TextColor(t.Text).Border(1, t.Border)
+					row.Background(t.Selection).TextColor(t.Accent).Border(1, ui.Transparent)
 				}
 				row.Tooltip(path).ContextMenu(func(m *ui.Menu) { a.fileMenu(services, m, file) })
 				showClose := row.Hovered() || file.ID == a.selected || c.Preferences().NoHover
 				row.Children(func() {
+					if file.ID == a.selected {
+						ui.Box(c).Absolute().Left(0).Top(9).Bottom(9).Width(2).Radius(1).Background(t.Accent).PassThrough()
+					}
 					ui.Box(c).Size(40, 40).Children(func() {
 						if showClose {
 							close := iconButton(c, "close-file", "close", "Close "+file.Name).Disabled(a.fileBusy)

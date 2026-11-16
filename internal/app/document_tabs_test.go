@@ -115,8 +115,8 @@ func assertTabVisible(t *testing.T, tt *ui.Tester, name string) {
 	tt.Frame()
 	tab, ok := tt.Find("Tab " + name)
 	strip, _ := tt.Find("Document tab strip")
-	if !ok || tab.X < strip.X-1 || tab.X+tab.W > strip.X+strip.W+1 {
-		t.Fatalf("active tab is outside the strip: %+v in %+v", tab, strip)
+	if !ok || tab.H != documentTabHeight || tab.X < strip.X-1 || tab.Y < strip.Y || tab.X+tab.W > strip.X+strip.W+1 || tab.Y+tab.H > strip.Y+strip.H {
+		t.Fatalf("active tab is outside the strip or has the wrong target size: %+v in %+v", tab, strip)
 	}
 }
 

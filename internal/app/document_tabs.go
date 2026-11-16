@@ -18,7 +18,10 @@ var brandImage = func() ui.ImageSource {
 	return image
 }()
 
-const documentTabWidth = 224
+const (
+	documentTabWidth  = 172
+	documentTabHeight = 48
+)
 
 // Only navigation state lives here. Every tab still owns the same File,
 // source buffer, selection, scroll position and undo history as the sidebar.
@@ -46,16 +49,16 @@ func documentTabs(c *ui.Context, state *documentTabState, files []*mdeditor.File
 	}
 	windowWidth, _ := c.Size()
 	reveal := state.revealed != selected || state.count != len(files) || windowWidth != state.windowWidth
-	ui.Row(c.Key("document-tabs")).Grow(1).MinWidth(0).FillHeight().Gap(4).AlignItems(ui.End).Children(func() {
+	ui.Row(c.Key("document-tabs")).Grow(1).MinWidth(0).FillHeight().Gap(4).AlignItems(ui.Center).Children(func() {
 		ui.ScrollHorizontal(c.Key("tab-scroll")).Width(float32(len(files)*(documentTabWidth+4) - 4)).Shrink(1).MinWidth(100).Height(titleBarHeight).TrackScroll(&state.scroll).Label("Document tab strip").Children(func() {
 			tabs := ui.TabsBase(c.Key("tab-list"), &index, len(files))
-			tabs.List.Bind(&state.focus).Height(titleBarHeight).Padding(12, 0, 0).Gap(4).OnChange(func() { choose(index, false) }).Children(func() {
+			tabs.List.Bind(&state.focus).Height(titleBarHeight).Gap(4).OnChange(func() { choose(index, false) }).Children(func() {
 				for i, file := range files {
 					// A keyed parent keeps the native tab identity with its file
 					// when another document is inserted or closed before it.
 					ui.Row(c.Key(file.ID)).Shrink(0).Children(func() {
 						active := file.ID == selected
-						tab := tabs.Tab(i).Width(documentTabWidth).Height(48).Padding(0, 4, 0, 14).Gap(9).AlignItems(ui.Center).Radius(12, 12, 0, 0).Label("Tab " + file.Name)
+						tab := tabs.Tab(i).Width(documentTabWidth).Height(documentTabHeight).Padding(0, 4, 0, 12).Gap(8).AlignItems(ui.Center).Radius(8, 8, 0, 0).Label("Tab " + file.Name)
 						path := file.Path
 						if path == "" {
 							path = file.Name
@@ -87,6 +90,9 @@ func documentTabs(c *ui.Context, state *documentTabState, files []*mdeditor.File
 						}
 						tab.OnClick(func() { choose(i, true) })
 						tab.Children(func() {
+							if active {
+								ui.Box(c).Absolute().Left(0).Right(0).Bottom(0).Height(2).Background(t.Accent).PassThrough()
+							}
 							ui.Box(c).Size(16, 16).Shrink(0).Children(func() {
 								icon := ui.Icon(c, icons["file"]).Size(16, 16)
 								if active {
@@ -99,15 +105,22 @@ func documentTabs(c *ui.Context, state *documentTabState, files []*mdeditor.File
 							ui.Text(c, file.Name).FontSize(13).FontWeight(500).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 							close := writingui.Interactive(c, ui.ButtonBase(c.Key("close-"+file.ID)), false).Size(40, 40).Shrink(0).KeepFocus().Center().Disabled(busy).Label("Close tab " + file.Name).Tooltip("Close " + file.Name + " · Cmd/Ctrl+W")
 							close.Children(func() {
-								if file.Modified() && !close.Hovered() && !c.Preferences().NoHover {
+								showClose := tab.Hovered() || close.Hovered() || close.Focused() || c.Preferences().NoHover
+								if file.Modified() && !showClose {
 									ui.Box(c).Size(6, 6).Radius(3).Background(t.Accent).Label("Unsaved tab " + file.Name)
 								} else {
-									ui.Icon(c, icons["close"]).Size(14, 14).Opacity(func() float32 {
-										if active || tab.Hovered() || c.Preferences().NoHover {
+									icon := ui.Icon(c, icons["close"]).Size(12, 12).Opacity(func() float32 {
+										if close.Hovered() || close.Focused() {
 											return 1
+										}
+										if active {
+											return 0.8
 										}
 										return 0.45
 									}())
+									if active {
+										icon.TextColor(t.Accent)
+									}
 								}
 							})
 							close.OnClick(func() { closeFile(file) })
@@ -117,7 +130,7 @@ func documentTabs(c *ui.Context, state *documentTabState, files []*mdeditor.File
 			})
 			state.focus.OnShortcut(c, 0, ui.KeyEnter, func() { choose(index, true) })
 		})
-		ui.Row(c.Key("tab-actions")).Height(48).Shrink(0).AlignItems(ui.Center).Children(func() {
+		ui.Row(c.Key("tab-actions")).Height(documentTabHeight).Shrink(0).Gap(2).AlignItems(ui.Center).Children(func() {
 			iconButton(c, "new-tab", "plus", "New document tab").Disabled(busy).OnClick(create)
 			all := iconButton(c, "all-tabs", "chevron", "All open documents").Tooltip("All open documents · Ctrl+Tab to switch")
 			all.PopoverMenuButton(func(menu *ui.Menu) {
@@ -170,5 +183,10 @@ func (a *App) cycleDocument(direction int) {
 
 func pageSurface(c *ui.Context, panel ui.Element) ui.Element {
 	t := c.Theme()
-	return panel.Background(t.Background).Radius(0, 16, 16, 16).MarginEnd(12).Border(1, t.Border.Alpha(0.55))
+	shadow := float32(0.04)
+	if t.Dark {
+		shadow = 0.16
+	}
+	return panel.Background(t.Background).Radius(10).Margin(0, 8, 8, 8).Border(1, t.Border.Alpha(0.55)).
+		NoShadow().Shadow(0, 2, 12, 0, ui.RGBA(0, 0, 0, shadow))
 }
