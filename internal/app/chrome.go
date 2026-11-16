@@ -63,7 +63,7 @@ func (a *App) header(c *ui.Context) {
 
 func (a *App) documentToolbar(c *ui.Context, file *mdeditor.File) {
 	t := c.Theme()
-	ui.Row(c.Key("document-toolbar")).FillWidth().Height(52).Padding(6, 20).Gap(12).AlignItems(ui.Center).Children(func() {
+	pageToolbar(c.Key("document-toolbar")).Gap(12).Children(func() {
 		ui.Row(c.Key("writing-mode")).Height(44).Padding(2).Gap(2).Radius(10).Background(t.Surface).Shrink(0).Children(func() {
 			for _, mode := range []struct {
 				label, name string
@@ -94,7 +94,7 @@ func (a *App) documentToolbar(c *ui.Context, file *mdeditor.File) {
 			writingui.Surface(c, panel).Width(248).Padding(8).Margin(8, 0, 0).Children(func() { a.blockFormatting(c, file) })
 		})
 	})
-	ui.Box(c).FillWidth().Height(1).MarginX(20).Background(t.Border.Alpha(0.4))
+	pageToolbarDivider(c)
 }
 
 func (a *App) documentMenu(m *ui.Menu) {

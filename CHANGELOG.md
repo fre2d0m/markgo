@@ -31,7 +31,7 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Changed
 
-- Refined document tabs as compact rounded controls with theme-driven active feedback, plus a separate rounded writing page and quieter sidebar selection.
+- Refined document tabs as compact full-height controls with square lower corners and theme-driven active feedback, plus a separate rounded writing page and quieter sidebar selection.
 - Unified native buttons, inputs and floating panels; refined sidebar type, segmented view controls, dialog spacing and stable footer metrics.
 - Added restrained hover/press feedback throughout formatting, appearance, search and dialog actions, respecting reduced motion.
 - Tuned primary and secondary text contrast across all twelve palettes, including hovered and pressed surfaces.
@@ -39,7 +39,7 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 - Rebuilt the workspace around a 48 DIP self-drawn tab bar, a 216 DIP navigation rail and a distinct paper surface; retained OS resize edges, close protection and maximize state.
 - Refined Paper, Warm paper, and Graphite; reduced wordmark and icon weight, softened sidebar selection, and added active-tool states and interruptible, reduced-motion-aware panel transitions.
 - Kept keyboard focus in the file list while moving between documents; Enter begins editing the selection.
-- Moved writing modes and common inline actions into a 56 DIP page toolbar, with labeled heading, list and quote actions in the Formatting panel; unified controls and find fields around 40 DIP targets.
+- Moved writing modes and common inline actions into a shared 52 DIP page toolbar in the main application and Writing Preview, with labeled heading, list and quote actions in the Formatting panel; unified controls and find fields around 40 DIP targets.
 - Refined sidebar, outline, reading typography, neutral syntax colors, hover feedback, and save-status presentation.
 - Start with a blank editable document; examples are available from the document menu.
 
@@ -47,6 +47,7 @@ All notable changes to MarkGo are documented here. The format follows [Keep a Ch
 
 ### Fixed
 
+- Page toolbar dividers now stop inside both paper edges, with matching inset and contrast in the main application and Writing Preview.
 - Keyboard theme selection and dismissal now return to the preserved writing caret in both editing modes.
 - Link validation marks the corresponding text or address field and leaves the document unchanged until Apply succeeds.
 - Apply the application icon to native windows and taskbar buttons in development and packaged builds.
