@@ -336,6 +336,10 @@ fn interactions(output: &str) {
         w.click("cancel-close", c);
         view.update(c, |v, c| v.render_error_fixture(w, c));
         w.render_frame(c);
+        let source = view.read(c).inspection(c).2;
+        w.input("must not reach the covered document", c);
+        w.press("cmd-b", c);
+        assert_eq!(view.read(c).inspection(c).2, source);
     })
     .unwrap();
     cx.capture_screenshot(handle)

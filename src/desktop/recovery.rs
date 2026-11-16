@@ -244,6 +244,12 @@ impl Workbench {
             return;
         }
         if let Some(error) = self.session_error.clone() {
+            // A corrupt/unwritable journal must not trap an already-saved
+            // workspace. Keep that journal intact and allow an ordinary exit.
+            if self.tabs.iter().all(|tab| !tab.dirty(c)) && !self.preferences_writing {
+                c.quit();
+                return;
+            }
             self.show_panel(
                 Panel::Error(format!("尚不能退出并保留草稿：{error}\n请先保存文档。")),
                 w,
