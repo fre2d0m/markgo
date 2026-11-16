@@ -1,6 +1,6 @@
 # Rust and GPUI migration decision
 
-Date: 2026-11-16. Target direction: Rust with GPUI Kit. Current runnable client: Go with MyGo.
+Date: 2026-11-16. Target direction: Rust with GPUI Kit. Default client: Go with MyGo. The separate Rust workbench now builds and runs.
 
 ## Decision and reasons
 
@@ -10,7 +10,7 @@ Those are reasons to select a direction, not proof that a new client is more rel
 
 The reviewed GPUI Kit baseline is **0.9.1**, with its default upstream GPUI snapshot. Its [published manifest](https://github.com/longbridge/gpui-kit/blob/main/crates/kit/Cargo.toml) enables components and assets; WebView and the JavaScript extension host are separate packages. The first GPUI integration should use an exact Kit requirement and a checked-in Cargo lockfile. Do not add `gpui-fast`, a separate upstream GPUI version, WebView, or a JavaScript host by default.
 
-The native Rust foundation uses Rust 1.92.0 and pulldown-cmark 0.13.6. The current library deliberately does not link GPUI yet: dependencies enter the application with their first real integration. [Installation requirements](https://gpui-kit.com/docs/installation/) and the target-platform input behavior must be checked again when introducing the window implementation.
+The integrated client pins Rust 1.99.1, GPUI Kit 0.9.1 and pulldown-cmark 0.13.6. The initially chosen Rust 1.92 failed to compile a standard-library API used by the resolved upstream dependency; the isolated toolchain was upgraded instead of patching GPUI. Desktop dependencies are behind the `desktop` feature, so the source/storage contracts still run without a renderer. [Installation requirements](https://gpui-kit.com/docs/installation/) and each target platform's input behavior remain platform-specific.
 
 ## Architecture to preserve
 
@@ -37,8 +37,10 @@ Before switching clients, compare a fixed 100,000-character corpus on the same h
 
 ## Evidence and current limits
 
-Stage 1 lives in [`native/`](../../native/README.md). Its projection recognizes top-level ATX headings using parser-confirmed source ranges. Unsupported constructs remain literal. It rejects stale projections and invalid UTF-8 offsets, retains LF/CRLF and mixed endings, and repairs closing heading markers when a range edit consumes their opening prefix. It does not yet implement full structured Markdown editing, incremental parsing, native rendering, native IME event sequencing, clipboard, file I/O, or app/session migration.
+Stages 1 and the stage-2 implementation live in [`native/`](../../native/README.md). The GPUI workbench now includes independent document tabs, wrapped direct heading/paragraph editing, a native input adapter, clipboard, source/reading modes, slash insertion, plain-text find/replace, guarded asynchronous file I/O and 12-theme appearance persistence. It uses the project's original vectors and design contract. Astrolith informed architecture review; its implementation/assets were not imported.
 
-The composition tests exercise the Rust model, not a macOS, Windows or Linux input method. A GPUI build, a headless test and an actual desktop observation are separate evidence. No performance or visual improvement is claimed by this first stage.
+The visual projection still recognizes top-level ATX headings and paragraphs. Other Markdown stays literal; formatting and list/task/quote continuation edit source transactions. Full structured visual parity, recovery/session migration and long-document work remain. No default-client switch has occurred.
+
+Core tests exercise the model and temporary files. The real Metal offscreen runner additionally exercises GPUI event dispatch and shared text/caret geometry and produces application screenshots. Neither exercises an installed input method, real desktop clipboard or Windows window controls. Stage 2's native-acceptance gate is therefore still open, even though native rendering and editing now exist.
 
 The Go client stays runnable while these gates are completed. Keep the new core independent of real user files and settings; do not replace a configured preview app or open a host application through shell commands. Native operations follow the meeting's approved desktop tool and application identifiers.

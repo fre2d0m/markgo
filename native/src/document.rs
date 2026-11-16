@@ -104,6 +104,28 @@ impl Document {
         !self.redo.is_empty()
     }
 
+    /// The UI may group a continuous burst of typing. It supplies the timing
+    /// policy; the model still verifies contiguous insertions and selections.
+    pub fn coalesce_typing(&mut self) {
+        if self.undo.len() < 2 || self.composition.is_some() {
+            return;
+        }
+        let last = &self.undo[self.undo.len() - 1];
+        let previous = &self.undo[self.undo.len() - 2];
+        if !last.removed.is_empty()
+            || last.inserted.is_empty()
+            || previous.inserted.is_empty()
+            || last.start != previous.start + previous.inserted.len()
+            || last.before != previous.after
+        {
+            return;
+        }
+        let last = self.undo.pop().unwrap();
+        let previous = self.undo.last_mut().unwrap();
+        previous.inserted.push_str(&last.inserted);
+        previous.after = last.after;
+    }
+
     /// Safe for save/recovery workers even while native input is composing.
     pub fn snapshot(&self) -> Snapshot {
         Snapshot {

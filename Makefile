@@ -1,4 +1,4 @@
-.PHONY: check fmt tidy vet staticcheck test race security build dev native-check
+.PHONY: check fmt tidy vet staticcheck test race security build dev native-check native-build native-dev native-preview native-render-check
 
 check: fmt tidy vet staticcheck test
 
@@ -37,3 +37,15 @@ native-check:
 	cd native && cargo fmt --check
 	cd native && cargo clippy --locked --all-targets -- -D warnings
 	cd native && cargo test --locked
+
+native-build:
+	cd native && cargo build --locked --features desktop --bin markgo
+
+native-dev:
+	cd native && cargo run --locked --features desktop --bin markgo
+
+native-preview:
+	cd native && cargo run --locked --features desktop --bin markgo -- --preview
+
+native-render-check:
+	cd native && cargo run --locked --features render-check --example render_check -- ../build/gpui-evidence
